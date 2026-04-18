@@ -1,0 +1,165 @@
+{% extends "guests/base_guests.html" %}
+{% block title %}Invitations · QR EVENT{% endblock %}
+
+{% block content %}
+
+<!-- En-tête -->
+<div class="g-page-header g-appear">
+  <div>
+    <div class="g-page-kicker"><i class="fas fa-envelope-open-text" style="margin-right:5px;"></i>Envoi d'invitations</div>
+    <h1 class="g-page-title">Invitations</h1>
+    <p class="g-page-sub">Envoyez vos invitations personnalisées par email ou WhatsApp.</p>
+  </div>
+</div>
+
+<!-- Grille 2 colonnes -->
+<div class="row g-4">
+
+  <!-- Formulaire envoi -->
+  <div class="col-lg-6 g-appear">
+    <div class="g-card h-100">
+      <div class="g-card-header">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <i class="fas fa-paper-plane" style="color:var(--g-red);"></i>
+          <span style="font-weight:700;font-size:.95rem;">Envoyer une invitation</span>
+        </div>
+      </div>
+      <div class="g-card-body">
+        <form method="post" enctype="multipart/form-data" id="invitationForm">
+          {% csrf_token %}
+
+          <div class="g-form-group">
+            <label class="g-label">Invité</label>
+            <select class="g-select" id="invite-select" name="invite">
+              {% for invite in invites %}
+              <option value="{{ invite.id }}"
+                      data-nom="{{ invite.nom|default:'' }}"
+                      data-prenom="{{ invite.prenom|default:'' }}"
+                      data-table="{% if invite.table %}{% if invite.table.label %}{{ invite.table.label }}{% elif invite.table.numero %}Table {{ invite.table.numero }}{% else %}Table #{{ invite.table.id }}{% endif %}{% endif %}"
+                      data-qrcode="{% if invite.qr_code %}{{ invite.qr_code.url }}{% endif %}">
+                {{ invite.nom }} {{ invite.prenom }}
+                {% if invite.table %}({% if invite.table.label %}{{ invite.table.label }}{% elif invite.table.numero %}Table {{ invite.table.numero }}{% else %}Table #{{ invite.table.id }}{% endif %}){% endif %}
+              </option>
+              {% empty %}
+              <option disabled>Aucun invité disponible</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="g-form-group">
+            <label class="g-label">Message personnalisé</label>
+            <textarea class="g-textarea" id="message" name="message" placeholder="Votre message d'invitation..."></textarea>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <button type="button" onclick="generatePreview()" class="g-btn g-btn-ghost" style="width:100%;justify-content:center;" id="btnPreview">
+              <i class="bi bi-eye"></i> Prévisualiser
+            </button>
+            <button type="submit" name="send_email" class="g-btn g-btn-primary" style="width:100%;justify-content:center;" id="btnSendEmail">
+              <i class="bi bi-envelope-fill"></i> Envoyer par Email
+            </button>
+            <button type="submit" name="send_whatsapp" class="g-btn g-btn-ghost" style="width:100%;justify-content:center;border-color:rgba(37,211,102,.30);color:#4ade80;" id="btnSendWhatsapp">
+              <i class="bi bi-whatsapp"></i> Envoyer par WhatsApp
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Aperçu -->
+  <div class="col-lg-6 g-appear g-appear-delay-1">
+    <div class="g-card h-100">
+      <div class="g-card-header">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <i class="fas fa-eye" style="color:var(--g-red);"></i>
+          <span style="font-weight:700;font-size:.95rem;">Aperçu</span>
+        </div>
+        <span class="g-pulse" style="width:7px;height:7px;"></span>
+      </div>
+      <div class="g-card-body">
+
+        <!-- Carte aperçu invité -->
+        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:var(--g-r);padding:18px;margin-bottom:20px;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+            <div class="g-invite-avatar" id="previewAvatar" style="width:42px;height:42px;font-size:.90rem;">—</div>
+            <div>
+              <div style="font-weight:800;font-size:1rem;color:var(--g-white);" id="preview-nom">—</div>
+              <div style="font-size:.78rem;color:rgba(255,255,255,.45);margin-top:2px;">
+                <i class="fas fa-table" style="font-size:.65rem;margin-right:4px;"></i>
+                <span id="preview-table">—</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.10em;color:rgba(255,255,255,.40);font-weight:700;margin-bottom:8px;">Message</div>
+          <div id="preview-message"
+               style="background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.06);border-radius:var(--g-r-sm);padding:12px;font-size:.88rem;color:rgba(255,255,255,.70);min-height:60px;line-height:1.6;white-space:pre-wrap;">
+            —
+          </div>
+        </div>
+
+        <!-- QR code aperçu -->
+        <div style="text-align:center;">
+          <img id="preview-qrcode" src="" alt="QR Code"
+               style="max-width:150px;display:none;border-radius:var(--g-r-sm);border:2px solid rgba(255,255,255,.10);padding:8px;background:rgba(255,255,255,.05);">
+          <div id="previewNoQr" style="text-align:center;padding:20px;color:rgba(255,255,255,.25);font-size:.82rem;">
+            <i class="bi bi-qr-code" style="font-size:2rem;margin-bottom:8px;display:block;"></i>
+            QR code apparaîtra ici
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function generatePreview() {
+  const sel = document.getElementById("invite-select");
+  const opt = sel && sel.options[sel.selectedIndex];
+  if (!opt) return;
+  const msgInput = document.getElementById("message");
+
+  const prenom = (opt.dataset.prenom || "").trim();
+  const nom = (opt.dataset.nom || "").trim();
+  const fullName = (prenom + " " + nom).trim();
+
+  const nameTarget = document.getElementById("preview-nom");
+  if (nameTarget) nameTarget.innerText = fullName || "—";
+
+  const avatar = document.getElementById("previewAvatar");
+  if (avatar) {
+    const initials = (prenom ? prenom[0].toUpperCase() : "") + (nom ? nom[0].toUpperCase() : "");
+    avatar.textContent = initials || "—";
+  }
+
+  const tableTarget = document.getElementById("preview-table");
+  if (tableTarget) tableTarget.innerText = (opt.dataset.table || "—").trim() || "—";
+
+  const messageTarget = document.getElementById("preview-message");
+  if (messageTarget) messageTarget.innerText = msgInput && msgInput.value ? msgInput.value : "—";
+
+  const img = document.getElementById("preview-qrcode");
+  const noQr = document.getElementById("previewNoQr");
+  if (img) {
+    if (opt.dataset.qrcode) {
+      img.src = opt.dataset.qrcode;
+      img.style.display = "inline";
+      if (noQr) noQr.style.display = "none";
+    } else {
+      img.style.display = "none";
+      if (noQr) noQr.style.display = "block";
+    }
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  const sel = document.getElementById("invite-select");
+  const msgInput = document.getElementById("message");
+  if (sel) sel.addEventListener("change", generatePreview);
+  if (msgInput) msgInput.addEventListener("input", generatePreview);
+  generatePreview();
+});
+</script>
+
+{% endblock %}

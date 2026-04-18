@@ -1,0 +1,710 @@
+{% extends "guests/base_guests.html" %}
+{% load static %}
+{% block title %}Invités · QR EVENT{% endblock %}
+
+{% block content %}
+
+<!-- En-tête -->
+<div class="g-page-header g-appear">
+  <div>
+    <div class="g-page-kicker">
+      <i class="bi bi-people-fill" style="margin-right:5px;"></i>Gestion des invités
+    </div>
+    <h1 class="g-page-title">Invitations</h1>
+    <p class="g-page-sub">Gérez votre liste d'invités et suivez les confirmations.</p>
+  </div>
+  <div class="g-page-actions">
+    <button class="g-btn g-btn-ghost" type="button" data-bs-toggle="modal" data-bs-target="#importModal" id="btnOpenImport">
+      <i class="bi bi-upload"></i> Import
+    </button>
+    <button class="g-btn g-btn-ghost" type="button" data-bs-toggle="modal" data-bs-target="#exportModal" id="btnOpenExport">
+      <i class="bi bi-download"></i> Export
+    </button>
+    <button class="g-btn g-btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#guestModal" id="btnAddGuest">
+      <i class="bi bi-plus-circle-fill"></i> Ajouter
+    </button>
+  </div>
+</div>
+
+{% if invites %}
+  <!-- Stats rapides -->
+  <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;" class="g-appear">
+    <div class="g-stat-card" style="flex:1;min-width:140px;padding:14px 18px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="g-stat-icon" style="width:34px;height:34px;border-radius:10px;margin:0;"><i class="fas fa-users" style="font-size:.82rem;"></i></div>
+        <div>
+          <div class="g-stat-value" style="font-size:1.4rem;">{{ invites|length }}</div>
+          <div class="g-stat-label" style="font-size:.68rem;">Invités</div>
+        </div>
+      </div>
+    </div>
+    <div class="g-stat-card" style="flex:1;min-width:140px;padding:14px 18px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="g-stat-icon" style="width:34px;height:34px;border-radius:10px;margin:0;"><i class="fas fa-check" style="font-size:.82rem;"></i></div>
+        <div>
+          <div class="g-stat-value" style="font-size:1.4rem;">{{ invites|length }}</div>
+          <div class="g-stat-label" style="font-size:.68rem;">En liste</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barre filtres + recherche -->
+  <div class="g-card mb-3 g-appear">
+    <div class="g-card-body" style="padding:14px 18px;">
+      <div class="g-filter-bar">
+        <div class="g-search-input-wrap">
+          <i class="bi bi-search" style="color:rgba(255,255,255,.4);font-size:.85rem;flex-shrink:0;"></i>
+          <input type="text" id="inviteSearchInput" class="g-search-input" placeholder="Nom, téléphone...">
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-left:auto;">
+          <!-- Actions groupées -->
+          <div style="position:relative;">
+            <button class="g-btn g-btn-ghost g-btn" style="font-size:.82rem;padding:7px 12px;" type="button"
+                    onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'" id="btnBulkActions">
+              <i class="bi bi-collection"></i> Actions <i class="bi bi-chevron-down" style="font-size:.7rem;"></i>
+            </button>
+            <div id="bulkDropdown" style="display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:200;min-width:180px;background:rgba(14,14,14,.97);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:var(--g-r);box-shadow:var(--g-shadow-lg);overflow:hidden;">
+              <a class="bulk-action" data-action="delete" href="#" style="display:block;padding:10px 14px;font-size:.84rem;color:#fca5a5;text-decoration:none;transition:background .15s;" onmouseenter="this.style.background='rgba(227,58,75,.14)'" onmouseleave="this.style.background=''">
+                <i class="bi bi-trash3 me-2"></i>Supprimer la sélection
+              </a>
+              <a class="bulk-action" data-action="present" href="#" style="display:block;padding:10px 14px;font-size:.84rem;color:var(--g-white-90);text-decoration:none;transition:background .15s;" onmouseenter="this.style.background='rgba(255,255,255,.06)'" onmouseleave="this.style.background=''">
+                <i class="bi bi-check-circle me-2" style="color:#6ee7a0;"></i>Marquer présent
+              </a>
+              <a class="bulk-action" data-action="absent" href="#" style="display:block;padding:10px 14px;font-size:.84rem;color:var(--g-white-90);text-decoration:none;transition:background .15s;" onmouseenter="this.style.background='rgba(255,255,255,.06)'" onmouseleave="this.style.background=''">
+                <i class="bi bi-x-circle me-2" style="color:#fca5a5;"></i>Marquer absent
+              </a>
+            </div>
+          </div>
+
+          <!-- Filtres pills -->
+          <button type="button" class="g-filter-pill active" data-filter="all" id="filterAll">Tous</button>
+          <button type="button" class="g-filter-pill" data-filter="couple" id="filterCouple">Couples</button>
+          <button type="button" class="g-filter-pill" data-filter="sans-table" id="filterNoTable">Sans table</button>
+          <button type="button" class="g-filter-pill" data-filter="present" id="filterPresent">
+            <span style="width:6px;height:6px;border-radius:50%;background:#6ee7a0;display:inline-block;"></span>Présents
+          </button>
+          <button type="button" class="g-filter-pill" data-filter="absent" id="filterAbsent">
+            <span style="width:6px;height:6px;border-radius:50%;background:#fca5a5;display:inline-block;"></span>Absents
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table invités -->
+  <div class="g-card g-appear">
+    <div class="g-table-wrap">
+      <table class="g-table">
+        <thead>
+          <tr>
+            <th style="width:40px;padding-left:20px;">
+              <input type="checkbox" id="selectAll" style="width:16px;height:16px;cursor:pointer;accent-color:var(--g-red);">
+            </th>
+            <th>Invité</th>
+            <th>Téléphone</th>
+            <th>Statut</th>
+            <th style="width:60px;text-align:right;padding-right:20px;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="invitesTableBody">
+          {% for i in invites %}
+          <tr data-invite-row
+              data-update-url="{% url 'guests:update_invite' i.pk %}"
+              data-prenom="{{ i.prenom }}"
+              data-nom="{{ i.nom }}"
+              data-tele="{{ i.tele }}"
+              data-table-id="{{ i.table.id|default:'' }}"
+              data-table-label="{% if i.table %}{% if i.table.label %}{{ i.table.label }}{% elif i.table.numero %}Table {{ i.table.numero }}{% else %}Table #{{ i.table.id }}{% endif %}{% endif %}"
+              data-id="{{ i.id }}"
+              data-couple="{% if i.couple_id %}1{% else %}0{% endif %}"
+              data-present="{% if i.present %}1{% else %}0{% endif %}"
+              data-has-table="{% if i.table %}1{% else %}0{% endif %}">
+            <td style="padding-left:20px;">
+              <input type="checkbox" class="form-check-input row-check" style="width:16px;height:16px;cursor:pointer;accent-color:var(--g-red);background:transparent;border-color:rgba(255,255,255,.2);">
+            </td>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div class="g-invite-avatar">{{ i.prenom|slice:":1"|upper }}{{ i.nom|slice:":1"|upper }}</div>
+                <div>
+                  <div style="font-weight:600;font-size:.90rem;">
+                    {{ i.prenom }} {{ i.nom }}
+                    {% if i.couple_id %}
+                      <span class="g-badge g-badge-white" style="margin-left:4px;font-size:.62rem;">Couple</span>
+                    {% endif %}
+                  </div>
+                  {% if i.table %}
+                    <div style="font-size:.72rem;color:var(--g-white-50);margin-top:2px;">
+                      <i class="fas fa-table" style="font-size:.62rem;"></i>
+                      {% if i.table.label %}{{ i.table.label }}{% elif i.table.numero %}Table {{ i.table.numero }}{% else %}—{% endif %}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+            <td style="color:var(--g-white-70);font-size:.88rem;">{{ i.tele|default:"—" }}</td>
+            <td>
+              {% if i.present %}
+                <span class="g-badge g-badge-success"><i class="bi bi-check-circle-fill"></i> Présent</span>
+              {% else %}
+                <span class="g-badge g-badge-white">Invité</span>
+              {% endif %}
+            </td>
+            <td style="text-align:right;padding-right:14px;">
+              <form class="d-inline" method="post" action="{% url 'guests:delete_invite' i.pk %}"
+                    onsubmit="return confirm('Supprimer {{ i.prenom }} {{ i.nom }} ?');">
+                {% csrf_token %}
+                <button class="g-btn g-btn-danger g-btn-icon" type="submit" title="Supprimer" style="width:32px;height:32px;border-radius:8px;">
+                  <i class="bi bi-trash3" style="font-size:.80rem;"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5">
+              <div class="g-empty">
+                <div class="g-empty-icon"><i class="fas fa-users"></i></div>
+                <h4>Aucun invité</h4>
+                <p>Aucun invité ne correspond aux filtres sélectionnés.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+{% else %}
+  <!-- Empty state -->
+  <div class="g-card g-appear">
+    <div class="g-empty" style="padding:64px 32px;">
+      <div class="g-empty-icon" style="width:72px;height:72px;border-radius:22px;margin-bottom:20px;">
+        <i class="fas fa-users" style="font-size:1.8rem;"></i>
+      </div>
+      <h4 style="font-size:1.2rem;font-weight:800;">Aucun invité pour l'instant</h4>
+      <p style="margin-bottom:24px;">Créer une liste est optionnel. Ajoutez vos invités pour préparer les envois personnalisés.</p>
+      <button class="g-btn g-btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#guestModal" id="btnAddGuestEmpty">
+        <i class="bi bi-plus-circle-fill"></i> Ajouter un invité
+      </button>
+    </div>
+  </div>
+{% endif %}
+
+
+<!-- Formulaire actions groupées -->
+<form id="bulkForm" method="post" action="{% url 'guests:bulk_action' %}" style="display:none;">
+  {% csrf_token %}
+  <input type="hidden" name="action" id="bulkActionInput">
+  <input type="hidden" name="ids" id="bulkIdsInput">
+</form>
+
+
+<!-- =================== MODAL IMPORT =================== -->
+<div class="modal fade g-modal" id="importModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-upload me-2" style="color:var(--g-red);"></i>Importer des invités</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="g-alert g-alert-info" style="margin-bottom:16px;">
+          <i class="bi bi-info-circle-fill"></i>
+          <span>Formats acceptés : <strong>.xlsx</strong> ou <strong>.csv</strong>. Téléchargez d'abord le modèle pour voir les colonnes attendues.</span>
+        </div>
+
+        <div class="g-table-wrap" style="margin-bottom:16px;border:1px solid rgba(255,255,255,.08);border-radius:var(--g-r-sm);">
+          <table class="g-table" style="font-size:.82rem;">
+            <thead>
+              <tr><th>Colonne</th><th>Exigence</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Title</td><td style="color:var(--g-white-50);">Optionnel</td></tr>
+              <tr><td>First Name</td><td style="color:var(--g-white-50);">Obligatoire (ou Last Name)</td></tr>
+              <tr><td>Last Name</td><td style="color:var(--g-white-50);">Obligatoire (ou First Name)</td></tr>
+              <tr><td>Email</td><td style="color:var(--g-white-50);">Optionnel</td></tr>
+              <tr><td>Telephone</td><td style="color:var(--g-white-50);">Recommandé (WhatsApp/SMS)</td></tr>
+              <tr><td>Couple_ID</td><td style="color:var(--g-white-50);">Optionnel</td></tr>
+              <tr><td>AddGuestsAllowed</td><td style="color:var(--g-white-50);">Optionnel</td></tr>
+              <tr><td>Tag</td><td style="color:var(--g-white-50);">Optionnel (VIP, Famille…)</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ul style="font-size:.84rem;color:var(--g-white-70);padding-left:18px;margin-bottom:16px;">
+          <li>Conservez la première ligne pour les en-têtes.</li>
+          <li>Pour un couple, saisissez la même valeur dans <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px;">Couple_ID</code> pour les deux lignes.</li>
+          <li>Le téléphone est utilisé pour les envois WhatsApp/SMS.</li>
+        </ul>
+
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="g-form-group">
+            <label class="g-label">Fichier (.xlsx ou .csv)</label>
+            <input class="g-input" type="file" name="excel_file" accept=".xlsx,.csv" required id="importFileInput">
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <a class="g-btn g-btn-ghost" href="{% url 'guests:download_invites_template' %}" id="btnDownloadTemplate">
+              <i class="bi bi-file-earmark-arrow-down"></i> Télécharger le modèle
+            </a>
+            <button type="submit" name="import_excel" class="g-btn g-btn-primary" id="btnDoImport">
+              <i class="bi bi-upload"></i> Importer
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- =================== MODAL EXPORT =================== -->
+<div class="modal fade g-modal" id="exportModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:380px;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-download me-2" style="color:var(--g-red);"></i>Exporter la liste</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" style="display:flex;gap:10px;justify-content:center;padding:28px;">
+        <a class="g-btn g-btn-ghost" href="{% url 'guests:export_invites' %}" id="btnExportCsv">
+          <i class="bi bi-file-earmark-spreadsheet"></i> CSV
+        </a>
+        <a class="g-btn g-btn-primary" href="{% url 'guests:export_invites' %}?fmt=xlsx" id="btnExportXlsx">
+          <i class="bi bi-file-earmark-excel"></i> XLSX
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- =================== MODAL ADD GUEST =================== -->
+<div class="modal fade g-modal" id="guestModal" tabindex="-1" aria-labelledby="guestModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <div class="g-page-kicker" style="margin-bottom:2px;">Nouvel invité</div>
+          <h5 class="modal-title" id="guestModalLabel" id="groupTitle">Groupe de 1+</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Tabs -->
+        <div class="g-tabs-bar">
+          <button type="button" class="g-tab active" data-modal-tab="individual" id="tabIndividual">Individuel</button>
+          <button type="button" class="g-tab" data-modal-tab="couple" id="tabCouple">Couple</button>
+          <button type="button" class="g-tab" data-modal-tab="group" id="tabGroup">Groupe</button>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" id="modalInviteForm">
+          {% csrf_token %}
+          <input type="hidden" name="invite_type" id="inviteType" value="individual">
+
+          <!-- Tab: Individual -->
+          <div class="tab-pane-modal active" data-modal-pane="individual">
+            <div class="g-modal-invitee-block" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:var(--g-r);padding:16px;margin-bottom:14px;">
+              <div style="font-size:.72rem;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--g-red);margin-bottom:12px;">Invité 1</div>
+              <div class="row g-3">
+                <div class="col-md-3">
+                  <label class="g-label">Titre</label>
+                  <select class="g-select" name="title_individual">
+                    <option>M.</option><option>Mme</option><option>Mlle</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label class="g-label">{{ form.prenom.label }}</label>
+                  {{ form.prenom }}
+                </div>
+                <div class="col-md-5">
+                  <label class="g-label">{{ form.nom.label }}</label>
+                  {{ form.nom }}
+                </div>
+                <div class="col-md-6">
+                  <label class="g-label">{{ form.tele.label }}</label>
+                  {{ form.tele }}
+                </div>
+                <div style="display:none;">{{ form.table }}</div>
+              </div>
+            </div>
+
+            <div class="extra-invitees" data-extra-container="individual"></div>
+
+            <div style="margin-bottom:14px;">
+              <div style="font-size:.80rem;font-weight:700;color:var(--g-white-70);margin-bottom:10px;">Invités supplémentaires autorisés :</div>
+              <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.84rem;color:var(--g-white-70);">
+                  <input type="radio" name="add_guests" value="unlimited" checked style="accent-color:var(--g-red);"> Illimité
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.84rem;color:var(--g-white-70);">
+                  <input type="radio" name="add_guests" value="none" style="accent-color:var(--g-red);"> Aucun
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.84rem;color:var(--g-white-70);">
+                  <input type="radio" name="add_guests" value="limited" style="accent-color:var(--g-red);"> Limité à :
+                </label>
+                <input type="number" class="g-input" style="width:100px;" min="0" placeholder="0" name="add_guests_limit">
+              </div>
+            </div>
+
+            <div class="add-invitee-btn" role="button" data-add-invitee="individual"
+                 style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--g-r-sm);background:rgba(227,58,75,.08);border:1px dashed rgba(227,58,75,.30);cursor:pointer;transition:all .18s;">
+              <i class="bi bi-plus-circle-fill" style="color:var(--g-red);font-size:1.1rem;"></i>
+              <div>
+                <div style="font-weight:700;font-size:.88rem;color:var(--g-white);">Ajouter un invité au groupe</div>
+                <div style="font-size:.76rem;color:var(--g-white-50);">Les invités du même groupe répondront ensemble.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab: Couple -->
+          <div class="tab-pane-modal" data-modal-pane="couple">
+            {% for label_num in "12" %}
+            <div class="g-modal-invitee-block" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:var(--g-r);padding:16px;margin-bottom:14px;">
+              <div style="font-size:.72rem;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--g-red);margin-bottom:12px;">Invité {{ label_num }}</div>
+              <div class="row g-3">
+                <div class="col-md-3">
+                  <label class="g-label">Titre</label>
+                  <select class="g-select" name="title_couple_{{ label_num }}">
+                    <option>M.</option><option>Mme</option><option>Mlle</option>
+                  </select>
+                </div>
+                {% if label_num == "1" %}
+                <div class="col-md-4"><label class="g-label">{{ form.prenom.label }}</label>{{ form.prenom }}</div>
+                <div class="col-md-5"><label class="g-label">{{ form.nom.label }}</label>{{ form.nom }}</div>
+                <div class="col-md-6"><label class="g-label">{{ form.tele.label }}</label>{{ form.tele }}</div>
+                <div style="display:none;">{{ form.table }}</div>
+                {% else %}
+                <div class="col-md-4"><label class="g-label">Prénom</label><input class="g-input" name="couple_first_name_2" placeholder="Prénom"></div>
+                <div class="col-md-5"><label class="g-label">Nom</label><input class="g-input" name="couple_last_name_2" placeholder="Nom"></div>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+
+            <div class="extra-invitees" data-extra-container="couple"></div>
+
+            <div style="margin-bottom:14px;">
+              <div style="font-size:.80rem;font-weight:700;color:var(--g-white-70);margin-bottom:10px;">Invités supplémentaires autorisés :</div>
+              <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.84rem;color:var(--g-white-70);">
+                  <input type="radio" name="add_guests_couple" value="unlimited" checked style="accent-color:var(--g-red);"> Illimité
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.84rem;color:var(--g-white-70);">
+                  <input type="radio" name="add_guests_couple" value="none" style="accent-color:var(--g-red);"> Aucun
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.84rem;color:var(--g-white-70);">
+                  <input type="radio" name="add_guests_couple" value="limited" style="accent-color:var(--g-red);"> Limité à :
+                </label>
+                <input type="number" class="g-input" style="width:100px;" min="0" placeholder="0" name="add_guests_limit_couple">
+              </div>
+            </div>
+
+            <div class="add-invitee-btn" role="button" data-add-invitee="couple"
+                 style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--g-r-sm);background:rgba(227,58,75,.08);border:1px dashed rgba(227,58,75,.30);cursor:pointer;transition:all .18s;">
+              <i class="bi bi-plus-circle-fill" style="color:var(--g-red);font-size:1.1rem;"></i>
+              <div>
+                <div style="font-weight:700;font-size:.88rem;color:var(--g-white);">Ajouter un invité au groupe</div>
+                <div style="font-size:.76rem;color:var(--g-white-50);">Les invités du même groupe répondront ensemble.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab: Group -->
+          <div class="tab-pane-modal" data-modal-pane="group">
+            {% for label_num in "12" %}
+            <div class="g-modal-invitee-block" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:var(--g-r);padding:16px;margin-bottom:14px;">
+              <div style="font-size:.72rem;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--g-red);margin-bottom:12px;">Invité {{ label_num }}</div>
+              <div class="row g-3">
+                <div class="col-md-3">
+                  <label class="g-label">Titre</label>
+                  <select class="g-select" name="title_group_{{ label_num }}">
+                    <option>M.</option><option>Mme</option><option>Mlle</option>
+                  </select>
+                </div>
+                {% if label_num == "1" %}
+                <div class="col-md-4"><label class="g-label">{{ form.prenom.label }}</label>{{ form.prenom }}</div>
+                <div class="col-md-5"><label class="g-label">{{ form.nom.label }}</label>{{ form.nom }}</div>
+                <div class="col-md-6"><label class="g-label">{{ form.tele.label }}</label>{{ form.tele }}</div>
+                <div style="display:none;">{{ form.table }}</div>
+                {% else %}
+                <div class="col-md-4"><label class="g-label">Prénom</label><input class="g-input" name="group_first_name_2" placeholder="Prénom"></div>
+                <div class="col-md-5"><label class="g-label">Nom</label><input class="g-input" name="group_last_name_2" placeholder="Nom"></div>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+
+            <div class="extra-invitees" data-extra-container="group"></div>
+
+            <div style="margin-bottom:14px;">
+              <div style="font-size:.80rem;font-weight:700;color:var(--g-white-70);margin-bottom:10px;">Invités supplémentaires autorisés :</div>
+              <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.84rem;color:var(--g-white-70);">
+                  <input type="radio" name="add_guests_group" value="unlimited" checked style="accent-color:var(--g-red);"> Illimité
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.84rem;color:var(--g-white-70);">
+                  <input type="radio" name="add_guests_group" value="none" style="accent-color:var(--g-red);"> Aucun
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.84rem;color:var(--g-white-70);">
+                  <input type="radio" name="add_guests_group" value="limited" style="accent-color:var(--g-red);"> Limité à :
+                </label>
+                <input type="number" class="g-input" style="width:100px;" min="0" placeholder="0" name="add_guests_limit_group">
+              </div>
+            </div>
+
+            <div class="add-invitee-btn" role="button" data-add-invitee="group"
+                 style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--g-r-sm);background:rgba(227,58,75,.08);border:1px dashed rgba(227,58,75,.30);cursor:pointer;transition:all .18s;">
+              <i class="bi bi-plus-circle-fill" style="color:var(--g-red);font-size:1.1rem;"></i>
+              <div>
+                <div style="font-weight:700;font-size:.88rem;color:var(--g-white);">Ajouter un invité au groupe</div>
+                <div style="font-size:.76rem;color:var(--g-white-50);">Les invités du même groupe répondront ensemble.</div>
+              </div>
+            </div>
+          </div>
+
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="g-btn g-btn-ghost" data-bs-dismiss="modal">Annuler</button>
+        <button type="submit" form="modalInviteForm" name="add_invite" class="g-btn g-btn-primary" id="btnSaveGuest">
+          <i class="bi bi-check-circle-fill"></i> Enregistrer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- =================== MODAL EDIT =================== -->
+<div class="modal fade g-modal" id="editInviteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-pencil-square me-2" style="color:var(--g-red);"></i>Modifier l'invité</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" id="editInviteForm">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="g-form-group">
+            <label class="g-label">Prénom</label>
+            <input class="g-input" name="prenom" id="editPrenom" required placeholder="Prénom">
+          </div>
+          <div class="g-form-group">
+            <label class="g-label">Nom</label>
+            <input class="g-input" name="nom" id="editNom" required placeholder="Nom">
+          </div>
+          <div class="g-form-group">
+            <label class="g-label">Téléphone</label>
+            <input class="g-input" name="tele" id="editTele" placeholder="+33 6 12 34 56 78">
+          </div>
+          <input type="hidden" name="table" id="editTableId">
+          <div id="editTableLabel" style="font-size:.78rem;color:var(--g-white-50);margin-top:6px;"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="g-btn g-btn-ghost" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="g-btn g-btn-primary" id="btnSaveEdit">
+            <i class="bi bi-check-lg"></i> Enregistrer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const tbody = document.getElementById('invitesTableBody');
+  const searchInput = document.getElementById('inviteSearchInput');
+  const filterButtons = document.querySelectorAll('.g-filter-pill');
+  const selectAll = document.getElementById('selectAll');
+  let currentFilter = 'all';
+
+  // Fermer dropdown bulk au clic ailleurs
+  document.addEventListener('click', function(e){
+    const d = document.getElementById('bulkDropdown');
+    const btn = document.getElementById('btnBulkActions');
+    if(d && btn && !btn.contains(e.target) && !d.contains(e.target)) d.style.display='none';
+  });
+
+  function rowMatchesFilter(row){
+    if(!row) return false;
+    const couple = row.dataset.couple === '1';
+    const hasTable = row.dataset.hasTable === '1';
+    const present = row.dataset.present === '1';
+    if(currentFilter === 'couple' && !couple) return false;
+    if(currentFilter === 'sans-table' && hasTable) return false;
+    if(currentFilter === 'present' && !present) return false;
+    if(currentFilter === 'absent' && present) return false;
+    return true;
+  }
+
+  function applyFilters(){
+    if(!tbody) return;
+    const q = (searchInput?.value || '').toLowerCase().trim();
+    tbody.querySelectorAll('tr[data-invite-row]').forEach(row=>{
+      const matchesFilter = rowMatchesFilter(row);
+      const text = (row.textContent || '').toLowerCase();
+      const matchesSearch = q ? text.indexOf(q) !== -1 : true;
+      row.style.display = (matchesFilter && matchesSearch) ? '' : 'none';
+    });
+  }
+
+  if(searchInput) searchInput.addEventListener('input', applyFilters);
+
+  filterButtons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      filterButtons.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter || 'all';
+      applyFilters();
+    });
+  });
+
+  function updateSelectAll(){
+    if(!tbody || !selectAll) return;
+    const rows = Array.from(tbody.querySelectorAll('.row-check'));
+    if(!rows.length){ selectAll.checked = false; return; }
+    selectAll.checked = rows.every(chk=>chk.checked);
+  }
+
+  if(selectAll && tbody){
+    selectAll.addEventListener('change', ()=>{
+      const checked = selectAll.checked;
+      tbody.querySelectorAll('.row-check').forEach(cb=>cb.checked = checked);
+    });
+    tbody.addEventListener('change', (e)=>{
+      if(e.target.classList.contains('row-check')) updateSelectAll();
+    });
+  }
+
+  const bulkForm = document.getElementById('bulkForm');
+  const bulkActionInput = document.getElementById('bulkActionInput');
+  const bulkIdsInput = document.getElementById('bulkIdsInput');
+  document.querySelectorAll('.bulk-action').forEach(link=>{
+    link.addEventListener('click', function(e){
+      e.preventDefault();
+      if(!tbody || !bulkForm || !bulkActionInput || !bulkIdsInput) return;
+      const ids = Array.from(tbody.querySelectorAll('.row-check:checked')).map(cb=>{
+        const row = cb.closest('tr[data-invite-row]');
+        return row ? row.dataset.id : null;
+      }).filter(Boolean);
+      if(!ids.length){ alert("Sélectionnez au moins un invité."); return; }
+      const action = this.dataset.action || '';
+      if(action === 'delete' && !confirm("Supprimer la sélection ?")) return;
+      bulkActionInput.value = action;
+      bulkIdsInput.value = ids.join(',');
+      bulkForm.submit();
+    });
+  });
+
+  // Tabs modal
+  const tabs = document.querySelectorAll('.g-tab');
+  const panes = document.querySelectorAll('.tab-pane-modal');
+  const inviteTypeInput = document.getElementById('inviteType');
+  const groupTitle = document.getElementById('guestModalLabel');
+  const extraCounters = {individual:0, couple:0, group:0};
+
+  function buildExtraBlock(target){
+    extraCounters[target] = (extraCounters[target] || 0) + 1;
+    const idx = extraCounters[target];
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:var(--g-r);padding:16px;margin-bottom:14px;';
+    wrapper.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div style="font-size:.72rem;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--g-red);">Invité ${idx + 1}</div>
+        <button type="button" class="g-btn g-btn-danger g-btn-icon" data-remove-extra style="width:28px;height:28px;border-radius:7px;font-size:.70rem;">×</button>
+      </div>
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="g-label">Titre</label>
+          <select class="g-select" name="${target}_title_extra_${idx}">
+            <option>M.</option><option>Mme</option><option>Mlle</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="g-label">Prénom</label>
+          <input class="g-input" name="${target}_first_name_extra_${idx}" placeholder="Prénom">
+        </div>
+        <div class="col-md-5">
+          <label class="g-label">Nom</label>
+          <input class="g-input" name="${target}_last_name_extra_${idx}" placeholder="Nom">
+        </div>
+        <div class="col-12">
+          <label class="g-label">Téléphone</label>
+          <input class="g-input" name="${target}_tele_extra_${idx}" placeholder="Téléphone">
+        </div>
+      </div>
+    `;
+    return wrapper;
+  }
+
+  tabs.forEach(function(tab){
+    tab.addEventListener('click', function(){
+      const target = tab.getAttribute('data-modal-tab');
+      tabs.forEach(t=>t.classList.remove('active'));
+      tab.classList.add('active');
+      panes.forEach(p=>{
+        const isActive = p.getAttribute('data-modal-pane') === target;
+        p.classList.toggle('active', isActive);
+        p.querySelectorAll('input, select, textarea').forEach(el=>{el.disabled = !isActive;});
+      });
+      if(inviteTypeInput) inviteTypeInput.value = target;
+      if(groupTitle){
+        if(target === 'individual') groupTitle.textContent = 'Groupe de 1+';
+        else if(target === 'couple') groupTitle.textContent = 'Groupe de 2+';
+        else groupTitle.textContent = 'Groupe de 3+';
+      }
+    });
+  });
+
+  panes.forEach(p=>{
+    const isActive = p.classList.contains('active');
+    p.querySelectorAll('input, select, textarea').forEach(el=>{el.disabled = !isActive;});
+  });
+
+  document.querySelectorAll('.add-invitee-btn').forEach(btn=>{
+    btn.addEventListener('click', function(){
+      const target = btn.getAttribute('data-add-invitee');
+      const container = document.querySelector(`.extra-invitees[data-extra-container="${target}"]`);
+      if(!container) return;
+      const block = buildExtraBlock(target);
+      container.appendChild(block);
+      const parentPane = btn.closest('.tab-pane-modal');
+      const active = parentPane && parentPane.classList.contains('active');
+      block.querySelectorAll('input, select, textarea').forEach(el=>{el.disabled = !active;});
+      block.querySelector('[data-remove-extra]').addEventListener('click', ()=>block.remove());
+    });
+  });
+
+  // Edit modal row click
+  const editModalEl = document.getElementById('editInviteModal');
+  const editModal = editModalEl ? new bootstrap.Modal(editModalEl) : null;
+  const editForm = document.getElementById('editInviteForm');
+  if (editModal && editForm && tbody) {
+    tbody.addEventListener('click', function (e) {
+      const target = e.target;
+      if (target.closest('button') || target.closest('a') || target.closest('form') || target.closest('input[type="checkbox"]')) return;
+      const row = target.closest('tr[data-invite-row]');
+      if (!row) return;
+      const updateUrl = row.getAttribute('data-update-url');
+      editForm.setAttribute('action', updateUrl);
+      document.getElementById('editPrenom').value = row.getAttribute('data-prenom') || '';
+      document.getElementById('editNom').value = row.getAttribute('data-nom') || '';
+      document.getElementById('editTele').value = row.getAttribute('data-tele') || '';
+      document.getElementById('editTableId').value = row.getAttribute('data-table-id') || '';
+      document.getElementById('editTableLabel').textContent = row.getAttribute('data-table-label') ? 'Table : ' + row.getAttribute('data-table-label') : '';
+      editModal.show();
+    });
+  }
+
+  applyFilters();
+});
+</script>
+
+{% endblock %}

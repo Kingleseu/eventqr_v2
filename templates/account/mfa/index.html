@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}MFA · EventQR{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-md-7 col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h1 class="h5 mb-3">Authentification à deux facteurs</h1>
+        <p class="text-muted">Sécurise ton compte avec un code TOTP (Google Authenticator) et des codes de secours.</p>
+        <div class="list-group">
+          <a class="list-group-item list-group-item-action" href="{% url 'mfa_totp_setup' %}">Configurer TOTP</a>
+          <a class="list-group-item list-group-item-action" href="{% url 'mfa_recovery_codes' %}">Codes de secours</a>
+          {# Si tu actives plus tard passkeys:
+          <a class="list-group-item list-group-item-action" href="{% url 'mfa_webauthn_setup' %}">Configurer une Passkey</a> #}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

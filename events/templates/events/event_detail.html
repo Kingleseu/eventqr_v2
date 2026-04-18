@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{ event.name }}</title></head>
+<body>
+  <h1>{{ event.name }} — {{ event.get_event_type_display }}</h1>
+  <p>Lieu: {{ event.venue }} | Début: {{ event.starts_at }} | Fin: {{ event.ends_at }}</p>
+  <form method="post" action="{% url 'events:toggle_active' event.pk %}">{% csrf_token %}
+    <button type="submit">{{ event.is_active|yesno:"Désactiver,Activer" }}</button>
+  </form>
+  <p>
+    <a href="{% url 'events:edit' event.pk %}">Modifier</a> |
+    <a href="{% url 'events:delete' event.pk %}">Supprimer</a>
+  </p>
+
+  {% if event.event_type == 'RETREAT' %}
+  <p><a href="{% url 'events:retreat_edit' event.pk %}">Infos Retraite</a></p>
+  {% endif %}
+
+  <h2>Tables</h2>
+  <p>
+    <a href="{% url 'events:table_create' event.pk %}">+ Ajouter une table</a> |
+    <a href="{% url 'events:table_bulk' event.pk %}">⚙ Générer en lot</a>
+  </p>
+  <table border="1" cellpadding="6" cellspacing="0">
+    <tr><th>Label</th><th>Capacité</th><th>Actions</th></tr>
+    {% for t in tables %}
+      <tr>
+        <td>{{ t.label }}</td>
+        <td>{{ t.capacity }}</td>
+        <td>
+          <a href="{% url 'events:table_edit' event.pk t.pk %}">Modifier</a> |
+          <a href="{% url 'events:table_delete' event.pk t.pk %}">Supprimer</a>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="3">Aucune table</td></tr>
+    {% endfor %}
+  </table>
+</body>
+</html>

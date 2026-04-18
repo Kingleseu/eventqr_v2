@@ -1,0 +1,176 @@
+{% extends "guests/base_guests.html" %}
+{% block title %}Dashboard · QR EVENT{% endblock %}
+
+{% block content %}
+
+<!-- En-tête page -->
+<div class="g-page-header g-appear">
+  <div>
+    <div class="g-page-kicker">
+      <span class="g-pulse" style="margin-right:6px;"></span>Tableau de bord
+    </div>
+    <h1 class="g-page-title">
+      {% if active_event %}{{ active_event.name }}{% else %}Bienvenue{% endif %}
+    </h1>
+    <p class="g-page-sub">
+      {% if active_event %}
+        {% if active_event.starts_at %}
+          {{ active_event.starts_at|date:"d/m/Y H:i" }}{% if active_event.ends_at %} → {{ active_event.ends_at|date:"d/m/Y H:i" }}{% endif %}
+        {% else %}
+          Événement en cours
+        {% endif %}
+      {% else %}
+        Sélectionnez ou créez un événement pour commencer.
+      {% endif %}
+    </p>
+  </div>
+  {% if active_event %}
+  <div class="g-page-actions">
+    <span class="g-badge g-badge-red">
+      <span class="g-pulse" style="width:6px;height:6px;"></span>
+      Événement actif
+    </span>
+  </div>
+  {% endif %}
+</div>
+
+{% if not active_event %}
+<div class="g-alert g-alert-warning g-appear">
+  <i class="bi bi-exclamation-triangle-fill"></i>
+  <span>Aucun événement actif. Sélectionne ou crée un événement dans le module principal.</span>
+</div>
+{% endif %}
+
+<!-- KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3 g-appear g-appear-delay-1">
+    <div class="g-stat-card">
+      <div class="g-stat-icon"><i class="fas fa-users"></i></div>
+      <div class="g-stat-value">{{ invites_count|default:0 }}</div>
+      <div class="g-stat-label">Invités</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3 g-appear g-appear-delay-2">
+    <div class="g-stat-card">
+      <div class="g-stat-icon"><i class="fas fa-check-double"></i></div>
+      <div class="g-stat-value">{{ present_count|default:0 }}</div>
+      <div class="g-stat-label">Présents</div>
+      <div class="g-stat-sub">{{ presence_rate|default:0 }}% de présence</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3 g-appear g-appear-delay-3">
+    <div class="g-stat-card">
+      <div class="g-stat-icon"><i class="fas fa-table"></i></div>
+      <div class="g-stat-value">{{ tables_count|default:0 }}</div>
+      <div class="g-stat-label">Tables</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3 g-appear g-appear-delay-4">
+    <div class="g-stat-card">
+      <div class="g-stat-icon"><i class="fas fa-user-clock"></i></div>
+      <div class="g-stat-value">{{ unassigned_count|default:0 }}</div>
+      <div class="g-stat-label">Sans table</div>
+    </div>
+  </div>
+</div>
+
+<!-- Actions rapides -->
+<div class="g-card mb-4 g-appear">
+  <div class="g-card-header">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <i class="fas fa-bolt" style="color:var(--g-red);"></i>
+      <span style="font-weight:700;font-size:.95rem;">Actions rapides</span>
+    </div>
+  </div>
+  <div class="g-card-body" style="display:flex;flex-wrap:wrap;gap:10px;">
+    <a class="g-btn g-btn-primary" href="{% url 'guests:add_invite' %}" id="dashBtnAddInvite">
+      <i class="bi bi-person-plus-fill"></i> Ajouter / Importer
+    </a>
+    <a class="g-btn g-btn-ghost" href="{% url 'guests:admin' %}" id="dashBtnTables">
+      <i class="bi bi-grid-3x3-gap"></i> Gérer les tables
+    </a>
+    <a class="g-btn g-btn-ghost" href="{% url 'guests:envoyer_invitations' %}" id="dashBtnInvitations">
+      <i class="bi bi-envelope-open-text"></i> Envoyer les invitations
+    </a>
+    {% if active_event %}
+    <a class="g-btn g-btn-ghost" href="{% url 'guests:invitation_studio' active_event.id %}" id="dashBtnStudio" style="border: 1px solid rgba(220,53,69,0.5); color: #fff;">
+      <i class="bi bi-magic" style="color: var(--g-red);"></i> Studio Invitation (Beta)
+    </a>
+    {% endif %}
+    <a class="g-btn g-btn-ghost" href="{% url 'guests:liste_presences' %}" id="dashBtnPresences">
+      <i class="bi bi-clipboard-check"></i> Liste des présences
+    </a>
+    <a class="g-btn g-btn-ghost" href="{% url 'guests:export_presences_csv' %}" id="dashBtnExport">
+      <i class="bi bi-download"></i> Exporter présences
+    </a>
+    {% if public_form_url %}
+    <a class="g-btn g-btn-ghost" href="{{ public_form_url }}" target="_blank" rel="noopener" id="dashBtnPublicForm">
+      <i class="bi bi-link-45deg"></i> Formulaire public
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Derniers invités -->
+<div class="g-card g-appear">
+  <div class="g-card-header">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <i class="fas fa-history" style="color:var(--g-red);"></i>
+      <span style="font-weight:700;font-size:.95rem;">Derniers invités</span>
+    </div>
+    <a href="{% url 'guests:add_invite' %}" class="g-badge g-badge-white" style="font-size:.72rem;text-decoration:none;" id="dashSeeAll">
+      Voir tout →
+    </a>
+  </div>
+  <div class="g-card-body" style="padding-top:0;padding-bottom:0;">
+    <div class="g-table-wrap">
+      <table class="g-table">
+        <thead>
+          <tr>
+            <th>Prénom</th>
+            <th>Nom</th>
+            <th>Téléphone</th>
+            <th>Table</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in last_invites %}
+          <tr onclick="window.location.href='{% url 'guests:add_invite' %}'" style="cursor:pointer;">
+            <td>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div class="g-invite-avatar">{{ i.prenom|slice:":1"|upper }}{{ i.nom|slice:":1"|upper }}</div>
+                {{ i.prenom }}
+              </div>
+            </td>
+            <td>{{ i.nom }}</td>
+            <td style="color:var(--g-white-70);">{{ i.tele|default:"—" }}</td>
+            <td>
+              {% if i.table %}
+                <span class="g-badge g-badge-white">
+                  {% if i.table.label %}{{ i.table.label }}
+                  {% elif i.table.numero %}Table {{ i.table.numero }}
+                  {% else %}—{% endif %}
+                </span>
+              {% else %}
+                <span style="color:var(--g-white-30);">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4">
+              <div class="g-empty">
+                <div class="g-empty-icon"><i class="fas fa-users"></i></div>
+                <h4>Aucun invité encore</h4>
+                <p>Commencez par ajouter vos premiers invités.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

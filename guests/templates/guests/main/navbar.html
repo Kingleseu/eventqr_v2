@@ -1,0 +1,215 @@
+{# guests/templates/guests/main/navbar.html #}
+{# Sidebar desktop + navbar mobile glassmorphism — Rouge · Blanc · Noir #}
+
+<!-- ===== SIDEBAR DESKTOP ===== -->
+<nav class="g-sidebar d-none d-lg-flex flex-column" id="gSidebar" aria-label="Navigation principale">
+
+  <!-- Logo -->
+  <div class="g-sidebar-logo">
+    <div class="g-sidebar-logo-mark">
+      <i class="bi bi-qr-code"></i>
+    </div>
+    <div>
+      <div class="g-sidebar-logo-text">QR EVENT</div>
+      <div class="g-sidebar-logo-sub">Gestion Événement</div>
+    </div>
+  </div>
+
+  <!-- Recherche invité -->
+  <div class="g-sidebar-search" style="margin-top:16px;">
+    <i class="bi bi-search g-sidebar-search-icon"></i>
+    <input
+      type="search"
+      placeholder="Rechercher un invité..."
+      id="navbarSearch"
+      autocomplete="off"
+      data-search-url="{% url 'guests:search_invites' %}"
+      data-event-id="{{ active_event.id|default:request.session.active_event_id|default:'' }}">
+    <ul class="g-search-results" id="navbarSearchResults"></ul>
+  </div>
+
+  <!-- Sélecteur d'événement -->
+  {% if events %}
+  <div class="g-event-switcher-wrap" style="margin-top:10px;">
+    <span class="g-event-switcher-label">Événement actif</span>
+    <select class="g-event-switcher" id="eventSwitcher">
+      {% for ev in events %}
+        <option value="{{ ev.id }}"{% if active_event and ev.id == active_event.id %} selected{% endif %}>
+          {{ ev.name }}{% if ev.starts_at %} · {{ ev.starts_at|date:"d/m" }}{% endif %}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
+
+  <!-- Navigation -->
+  <nav class="g-nav" aria-label="Menu principal">
+    <span class="g-nav-section-label">Menu</span>
+
+    <a href="{% url 'guests:home' %}"
+       class="g-nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}"
+       id="gNavDashboard">
+      <i class="fas fa-chart-line"></i>
+      Dashboard
+    </a>
+
+    <a href="{% url 'guests:add_invite' %}"
+       class="g-nav-link {% if request.resolver_match.url_name == 'add_invite' %}active{% endif %}"
+       id="gNavInvites">
+      <i class="fas fa-user-plus"></i>
+      Invités
+    </a>
+
+    <a href="{% url 'guests:admin' %}"
+       class="g-nav-link {% if request.resolver_match.url_name == 'admin' %}active{% endif %}"
+       id="gNavTables">
+      <i class="fas fa-table"></i>
+      Tables
+    </a>
+
+    <a href="{% url 'guests:envoyer_invitations' %}"
+       class="g-nav-link {% if request.resolver_match.url_name == 'envoyer_invitations' %}active{% endif %}"
+       id="gNavInvitations">
+      <i class="fas fa-envelope-open-text"></i>
+      Invitations
+    </a>
+
+    <a href="{% url 'guests:liste_presences' %}"
+       class="g-nav-link {% if request.resolver_match.url_name == 'liste_presences' %}active{% endif %}"
+       id="gNavPresences">
+      <i class="fas fa-clipboard-check"></i>
+      Présences
+    </a>
+  </nav>
+
+  <!-- Notifications -->
+  <div class="g-notif-wrap">
+    <div class="g-notif-btn" id="notif-bell" role="button" aria-label="Notifications">
+      <i class="bi bi-bell" style="width:18px;text-align:center;"></i>
+      <span>Notifications</span>
+      <span class="g-notif-badge" id="notif-badge"></span>
+    </div>
+    <div class="g-notif-dropdown" id="notif-dropdown">
+      <ul style="margin:0;padding:0;" id="notif-list"></ul>
+    </div>
+    <audio id="notif-sound" src="https://cdn.pixabay.com/audio/2022/07/26/audio_124b2d1e14.mp3"></audio>
+  </div>
+
+  <!-- Profil -->
+  <div class="g-sidebar-profile">
+    <div class="g-profile-card">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541"
+           class="g-avatar" alt="Avatar utilisateur">
+      <div>
+        <div class="g-profile-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+        <div class="g-profile-role">
+          {% if user_role %}{{ user_role|title }}
+          {% elif request.user.is_superuser %}Administrateur
+          {% elif request.user.is_staff %}Staff
+          {% else %}Utilisateur{% endif %}
+        </div>
+      </div>
+    </div>
+    <a href="/accounts/logout/" class="g-logout-btn" id="gLogoutBtn">
+      <i class="fas fa-sign-out-alt"></i>
+      Déconnexion
+    </a>
+  </div>
+
+</nav>
+
+<!-- ===== MOBILE NAVBAR ===== -->
+<nav class="g-mobile-nav d-lg-none" id="gMobileNav" aria-label="Navigation mobile">
+
+  <!-- Logo mobile -->
+  <a class="g-mobile-logo" href="{% url 'guests:home' %}">
+    <span class="g-mobile-logo-dot"></span>
+    QR EVENT
+  </a>
+
+  <!-- Actions droite -->
+  <div style="display:flex;align-items:center;gap:8px;">
+    <!-- Notif mobile -->
+    <div style="position:relative;" id="notif-bell-mobile" role="button" aria-label="Notifications">
+      <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.10);display:grid;place-items:center;cursor:pointer;">
+        <i class="bi bi-bell" style="color:rgba(255,255,255,0.8);font-size:.9rem;"></i>
+      </div>
+      <span class="g-notif-badge" id="notif-badge-mobile" style="top:3px;left:20px;"></span>
+      <div class="g-notif-dropdown" id="notif-dropdown-mobile" style="left:auto;right:0;">
+        <ul style="margin:0;padding:0;" id="notif-list-mobile"></ul>
+      </div>
+    </div>
+    <audio id="notif-sound-mobile" src="https://cdn.pixabay.com/audio/2022/07/26/audio_124b2d1e14.mp3"></audio>
+
+    <!-- Hamburger -->
+    <button class="g-hamburger" id="gHamburger" aria-label="Ouvrir le menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- ===== DRAWER MOBILE ===== -->
+<div class="g-mobile-drawer d-lg-none" id="gMobileDrawer">
+
+  <!-- Sélecteur d'événement mobile -->
+  {% if events %}
+  <div style="margin-bottom:16px;">
+    <span class="g-event-switcher-label">Événement actif</span>
+    <select class="g-event-switcher" id="eventSwitcherMobile">
+      {% for ev in events %}
+        <option value="{{ ev.id }}"{% if active_event and ev.id == active_event.id %} selected{% endif %}>
+          {{ ev.name }}{% if ev.starts_at %} · {{ ev.starts_at|date:"d/m" }}{% endif %}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
+
+  <!-- Recherche mobile -->
+  <div class="g-sidebar-search" style="margin-bottom:16px;">
+    <i class="bi bi-search g-sidebar-search-icon"></i>
+    <input
+      type="search"
+      placeholder="Rechercher un invité..."
+      id="navbarSearchMobile"
+      autocomplete="off"
+      data-search-url="{% url 'guests:search_invites' %}"
+      data-event-id="{{ active_event.id|default:request.session.active_event_id|default:'' }}">
+    <ul class="g-search-results" id="navbarSearchResultsMobile"></ul>
+  </div>
+
+  <!-- Nav links mobile -->
+  <nav class="g-nav">
+    <a href="{% url 'guests:home' %}" class="g-nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+      <i class="fas fa-chart-line"></i> Dashboard
+    </a>
+    <a href="{% url 'guests:add_invite' %}" class="g-nav-link {% if request.resolver_match.url_name == 'add_invite' %}active{% endif %}">
+      <i class="fas fa-user-plus"></i> Invités
+    </a>
+    <a href="{% url 'guests:admin' %}" class="g-nav-link {% if request.resolver_match.url_name == 'admin' %}active{% endif %}">
+      <i class="fas fa-table"></i> Tables
+    </a>
+    <a href="{% url 'guests:envoyer_invitations' %}" class="g-nav-link {% if request.resolver_match.url_name == 'envoyer_invitations' %}active{% endif %}">
+      <i class="fas fa-envelope-open-text"></i> Invitations
+    </a>
+    <a href="{% url 'guests:liste_presences' %}" class="g-nav-link {% if request.resolver_match.url_name == 'liste_presences' %}active{% endif %}">
+      <i class="fas fa-clipboard-check"></i> Présences
+    </a>
+  </nav>
+
+  <!-- Profil mobile -->
+  <div style="margin-top:auto;padding-top:20px;border-top:1px solid rgba(255,255,255,0.08);">
+    <div class="g-profile-card" style="margin-bottom:10px;">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541" class="g-avatar" alt="Avatar">
+      <div>
+        <div class="g-profile-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+        <div class="g-profile-role">
+          {% if request.user.is_superuser %}Administrateur{% elif request.user.is_staff %}Staff{% else %}Utilisateur{% endif %}
+        </div>
+      </div>
+    </div>
+    <a href="/accounts/logout/" class="g-logout-btn">
+      <i class="fas fa-sign-out-alt"></i> Déconnexion
+    </a>
+  </div>
+</div>

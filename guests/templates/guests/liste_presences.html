@@ -1,0 +1,136 @@
+{% extends "guests/base_guests.html" %}
+{% block title %}Présences · QR EVENT{% endblock %}
+
+{% block content %}
+
+<!-- En-tête -->
+<div class="g-page-header g-appear">
+  <div>
+    <div class="g-page-kicker"><i class="fas fa-clipboard-check" style="margin-right:5px;"></i>Suivi en temps réel</div>
+    <h1 class="g-page-title">Présences</h1>
+    <p class="g-page-sub">Visualisez et filtrez les arrivées de vos invités.</p>
+  </div>
+  <div class="g-page-actions">
+    <a class="g-btn g-btn-ghost" href="{% url 'guests:export_presences_csv' %}" id="btnExportPresences">
+      <i class="bi bi-download"></i> Exporter CSV
+    </a>
+  </div>
+</div>
+
+<!-- Filtres -->
+<div class="g-card mb-3 g-appear">
+  <div class="g-card-body" style="padding:12px 18px;">
+    <div class="g-filter-bar" style="gap:8px;">
+      <span style="font-size:.80rem;font-weight:600;color:rgba(255,255,255,.5);margin-right:4px;">Filtrer :</span>
+      <button type="button" class="g-filter-pill active" data-presence-filter="all" id="presFilterAll">
+        Tous
+      </button>
+      <button type="button" class="g-filter-pill" data-presence-filter="present" id="presFilterPresent">
+        <span style="width:6px;height:6px;border-radius:50%;background:#6ee7a0;display:inline-block;"></span>
+        Présents
+      </button>
+      <button type="button" class="g-filter-pill" data-presence-filter="absent" id="presFilterAbsent">
+        <span style="width:6px;height:6px;border-radius:50%;background:#fca5a5;display:inline-block;"></span>
+        Absents
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Table présences -->
+<div class="g-card g-appear">
+  <div class="g-table-wrap">
+    <table class="g-table">
+      <thead>
+        <tr>
+          <th>Invité</th>
+          <th>Téléphone</th>
+          <th>Table</th>
+          <th>Présence</th>
+          <th>Scan</th>
+        </tr>
+      </thead>
+      <tbody id="presenceTableBody">
+        {% for i in invites %}
+        <tr data-presence-row data-present="{% if i.present %}1{% else %}0{% endif %}">
+          <td>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="g-invite-avatar {% if not i.present %}unassigned{% endif %}" style="width:32px;height:32px;font-size:.70rem;">
+                {{ i.prenom|slice:":1"|upper }}{{ i.nom|slice:":1"|upper }}
+              </div>
+              <div>
+                <div style="font-weight:600;font-size:.90rem;">{{ i.prenom }} {{ i.nom }}</div>
+              </div>
+            </div>
+          </td>
+          <td style="color:rgba(255,255,255,.60);font-size:.88rem;">{{ i.tele|default:"—" }}</td>
+          <td>
+            {% if i.table %}
+              <span class="g-badge g-badge-white">
+                {% if i.table.label %}{{ i.table.label }}
+                {% elif i.table.numero %}Table {{ i.table.numero }}
+                {% else %}Table #{{ i.table.id }}{% endif %}
+              </span>
+            {% else %}
+              <span style="color:rgba(255,255,255,.25);">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if i.present %}
+              <span class="g-badge g-badge-success">
+                <i class="bi bi-check-circle-fill"></i> Présent
+              </span>
+            {% else %}
+              <span class="g-badge" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);color:rgba(255,255,255,.40);">
+                <i class="bi bi-circle"></i> Absent
+              </span>
+            {% endif %}
+          </td>
+          <td style="color:rgba(255,255,255,.40);font-size:.80rem;">
+            {% if i.date_scanned %}
+              <i class="bi bi-qr-code me-1"></i>{{ i.date_scanned|date:"d/m/Y H:i" }}
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5">
+            <div class="g-empty">
+              <div class="g-empty-icon"><i class="fas fa-clipboard-check"></i></div>
+              <h4>Aucune donnée</h4>
+              <p>Les présences s'afficheront ici dès que les invités seront scannés.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const filterBtns = document.querySelectorAll('[data-presence-filter]');
+  const rows = document.querySelectorAll('tr[data-presence-row]');
+
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', function () {
+      filterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const value = btn.getAttribute('data-presence-filter');
+      rows.forEach(function (row) {
+        const isPresent = row.getAttribute('data-present') === '1';
+        if (value === 'all' || (value === 'present' && isPresent) || (value === 'absent' && !isPresent)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+  });
+});
+</script>
+{% endblock %}

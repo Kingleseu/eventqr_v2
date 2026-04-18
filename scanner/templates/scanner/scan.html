@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Scanner · EventQR{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h1 class="h5 mb-3">Scanner un invité</h1>
+        <p class="text-muted small">Colle le token ou ouvre un lien QR du type <code>/scan/?token=...</code>.</p>
+        <div class="input-group mb-3">
+          <input id="token" class="form-control" placeholder="Token">
+          <button id="btn" class="btn btn-primary">Valider</button>
+        </div>
+        <pre id="out" class="bg-light p-3 rounded border small mb-0">{}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function submitToken(t) {
+  const fd = new FormData(); fd.append('token', t);
+  const res = await fetch("{% url 'scan_token' %}", {
+    method: 'POST', body: fd, headers: {'X-CSRFToken': '{{ csrf_token }}'}
+  });
+  const data = await res.json();
+  document.getElementById('out').textContent = JSON.stringify(data, null, 2);
+}
+document.getElementById('btn').onclick = () => {
+  const t = document.getElementById('token').value.trim();
+  if (t) submitToken(t);
+};
+const p = new URLSearchParams(location.search);
+const t = p.get('token'); if (t) { document.getElementById('token').value = t; submitToken(t); }
+</script>
+{% endblock %}

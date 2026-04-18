@@ -1,0 +1,568 @@
+{% extends "guests/base_guests.html" %}
+{% load static %}
+{% block title %}Tables · QR EVENT{% endblock %}
+
+{% block content %}
+
+<!-- En-tête -->
+<div class="g-page-header g-appear">
+  <div>
+    <div class="g-page-kicker"><i class="fas fa-table" style="margin-right:5px;"></i>Plan de salle</div>
+    <h1 class="g-page-title">Tables</h1>
+    <p class="g-page-sub">Gérez le placement de vos invités par glisser-déposer.</p>
+  </div>
+  <div class="g-page-actions">
+    <button class="g-btn g-btn-ghost" onclick="startQRScanner()" title="Scanner QR" id="btnQrScan">
+      <i class="bi bi-qr-code-scan"></i> Scanner
+    </button>
+    <a href="{% url 'guests:table_plan' %}" class="g-btn g-btn-ghost" id="btnTablePlan">
+      <i class="bi bi-grid-3x3-gap"></i> Plan de salle
+    </a>
+    <button class="g-btn g-btn-ghost" data-bs-toggle="modal" data-bs-target="#generateTablesModal" id="btnGenTables">
+      <i class="bi bi-magic"></i> Générer
+    </button>
+    <button class="g-btn g-btn-primary" data-bs-toggle="modal" data-bs-target="#newTableModal" id="btnNewTable">
+      <i class="bi bi-plus-circle-fill"></i> Nouvelle table
+    </button>
+  </div>
+</div>
+
+<!-- QR Scanner -->
+<div id="my-qr-reader" style="display:none;max-width:320px;margin:0 auto 24px;padding:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10);border-radius:var(--g-r-lg);"></div>
+
+<!-- Layout principal -->
+<div class="row g-4 g-appear">
+
+  <!-- Sidebar invités non placés -->
+  <div class="col-12 col-md-3">
+    <div class="g-unassigned-sidebar">
+      <div class="g-unassigned-header">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <i class="bi bi-people" style="color:var(--g-red);"></i>
+          <span style="font-weight:700;font-size:.90rem;">Non placés</span>
+        </div>
+        <div class="g-sidebar-search" style="margin:0;">
+          <i class="bi bi-search g-sidebar-search-icon"></i>
+          <input type="text" id="guestSearch" placeholder="Rechercher..." onkeyup="filterGuests()" style="padding-left:30px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);border-radius:8px;color:rgba(255,255,255,.85);font-size:.82rem;width:100%;outline:none;padding:7px 10px 7px 30px;font-family:inherit;">
+        </div>
+      </div>
+      <div class="g-unassigned-list">
+        <ul id="unassigned-list" class="sortable-list" style="min-height:120px;margin:0;padding:0;list-style:none;">
+          {% for g in unassigned_guests %}
+          <li class="g-guest-chip guest-item move-cursor" data-guest-id="{{ g.id }}">
+            <div class="g-invite-avatar unassigned" style="width:30px;height:30px;font-size:.62rem;">
+              {{ g.prenom|slice:":1"|upper }}{{ g.nom|slice:":1"|upper }}
+            </div>
+            <div style="font-size:.84rem;font-weight:600;color:rgba(255,255,255,.80);text-overflow:ellipsis;overflow:hidden;white-space:nowrap;">
+              {{ g.prenom }} {{ g.nom }}
+            </div>
+          </li>
+          {% empty %}
+          <div class="g-empty no-guests-msg" style="padding:28px 16px;">
+            <div class="g-empty-icon" style="width:42px;height:42px;border-radius:12px;margin-bottom:10px;">
+              <i class="bi bi-check-all" style="font-size:.9rem;color:#6ee7a0;"></i>
+            </div>
+            <p style="font-size:.80rem;color:rgba(255,255,255,.4);text-align:center;">Tous les invités sont placés !</p>
+          </div>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grille de tables -->
+  <div class="col-12 col-md-9">
+    <div class="row g-3">
+      {% for t in tables %}
+      <div class="col-12 col-lg-6 col-xl-4 g-appear g-appear-delay-1">
+        <div class="g-table-card">
+          <!-- Barre colorée du haut -->
+          <div class="g-table-card-top-bar" style="background:linear-gradient(90deg, {{ t.obj.color|default:'var(--g-red)' }}, var(--g-red-deep));"></div>
+
+          <!-- Header table -->
+          <div class="g-table-card-header">
+            <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;">
+              <span class="g-capbadge">{{ t.count }}/{% if t.capacity %}{{ t.capacity }}{% else %}∞{% endif %}</span>
+              <h5 style="margin:0;font-weight:800;font-size:.92rem;color:var(--g-white);text-overflow:ellipsis;overflow:hidden;white-space:nowrap;"
+                  title="{{ t.display_label|striptags }}">
+                {{ t.display_label|safe }}
+              </h5>
+            </div>
+            <!-- Menu dropdown -->
+            <div class="dropdown">
+              <button class="g-btn g-btn-ghost g-btn-icon" style="width:30px;height:30px;border-radius:8px;border:none;color:rgba(255,255,255,.5);"
+                      type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-three-dots-vertical" style="font-size:.80rem;"></i>
+              </button>
+              <ul class="dropdown-menu" style="background:rgba(14,14,14,.97);border:1px solid rgba(255,255,255,.10);border-radius:var(--g-r);box-shadow:var(--g-shadow-lg);min-width:160px;">
+                <li>
+                  <button class="dropdown-item" style="color:rgba(255,255,255,.80);font-size:.84rem;padding:9px 14px;background:transparent;border:none;width:100%;text-align:left;cursor:pointer;"
+                          data-id="{{ t.obj.id }}" data-numero="{{ t.obj.numero }}"
+                          data-nom="{{ t.obj.nom|default:'' }}" data-capacity="{{ t.obj.nombre_de_places }}"
+                          data-color="{{ t.obj.color|default:'#ffffff' }}" data-shape="{{ t.obj.shape }}"
+                          onclick="openEditTableModal(this.dataset.id, this.dataset.numero, this.dataset.nom, this.dataset.capacity, this.dataset.color, this.dataset.shape)">
+                    <i class="bi bi-pencil me-2" style="color:var(--g-red);"></i>Modifier
+                  </button>
+                </li>
+                <li>
+                  <form method="post" action="{% url 'guests:delete_table' t.obj.id %}" onsubmit="return confirm('Supprimer cette table ?');">
+                    {% csrf_token %}
+                    <button class="dropdown-item" style="color:#fca5a5;font-size:.84rem;padding:9px 14px;background:transparent;border:none;width:100%;text-align:left;cursor:pointer;">
+                      <i class="bi bi-trash3 me-2"></i>Supprimer
+                    </button>
+                  </form>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Barre progression -->
+          {% if t.capacity %}
+          <div class="g-progress-bar">
+            <div class="g-progress-fill js-table-progress" role="progressbar"
+                 data-count="{{ t.count }}" data-capacity="{{ t.capacity }}"
+                 style="width:0%;"></div>
+          </div>
+          {% endif %}
+
+          <!-- Corps : liste invités -->
+          <div class="g-table-card-body">
+            <ul class="sortable-list h-100" data-table-id="{{ t.obj.id }}"
+                style="min-height:80px;margin:0;padding:0;list-style:none;">
+              {% for g in t.invites %}
+              <li class="g-guest-chip guest-item move-cursor" data-guest-id="{{ g.id }}">
+                <div class="g-invite-avatar" style="width:30px;height:30px;font-size:.62rem;">
+                  {{ g.prenom|slice:":1"|upper }}{{ g.nom|slice:":1"|upper }}
+                </div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:.84rem;font-weight:600;color:rgba(255,255,255,.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    {{ g.prenom }} {{ g.nom }}
+                  </div>
+                  <div style="font-size:.68rem;margin-top:1px;">
+                    {% if g.present %}
+                      <span style="color:#6ee7a0;"><i class="bi bi-check-circle-fill me-1"></i>Présent</span>
+                    {% else %}
+                      <span style="color:rgba(255,255,255,.35);">Invité</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </li>
+              {% empty %}
+              <li class="empty-msg" style="display:flex;align-items:center;justify-content:center;min-height:80px;color:rgba(255,255,255,.25);font-size:.80rem;font-style:italic;list-style:none;">
+                Glissez des invités ici
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="col-12">
+        <div class="g-card">
+          <div class="g-empty" style="padding:64px;">
+            <div class="g-empty-icon" style="width:64px;height:64px;border-radius:20px;margin-bottom:20px;"><i class="fas fa-table" style="font-size:1.6rem;"></i></div>
+            <h4>Aucune table</h4>
+            <p>Commencez par créer ou générer des tables.</p>
+            <button class="g-btn g-btn-primary" data-bs-toggle="modal" data-bs-target="#newTableModal" style="margin-top:16px;">
+              <i class="bi bi-plus-circle-fill"></i> Créer une table
+            </button>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+
+<!-- Toast erreur -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999;">
+  <div id="liveToast" class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true"
+       style="background:rgba(14,14,14,.95);backdrop-filter:blur(20px);border:1px solid rgba(227,58,75,.30) !important;border-radius:var(--g-r);color:rgba(255,255,255,.90);">
+    <div class="d-flex">
+      <div class="toast-body"><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Erreur lors du déplacement de l'invité.</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL: Nouvelle table -->
+<div class="modal fade g-modal" id="newTableModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-plus-circle me-2" style="color:var(--g-red);"></i>Nouvelle Table</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form method="POST">
+          {% csrf_token %}
+          <div class="g-form-group"><label class="g-label">Nom / Numéro</label>{{ table_form.numero }}</div>
+          <div class="g-form-group"><label class="g-label">Titre / Tag (Optionnel)</label>{{ table_form.nom }}</div>
+          <div class="g-form-group"><label class="g-label">Forme</label>{{ table_form.shape }}</div>
+          <div class="g-form-group"><label class="g-label">Capacité</label>{{ table_form.nombre_de_places }}</div>
+          <button type="submit" name="create_table" class="g-btn g-btn-primary w-100" style="margin-top:8px;" id="btnCreateTable">
+            <i class="bi bi-check-circle-fill"></i> Créer la table
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Générer tables -->
+<div class="modal fade g-modal" id="generateTablesModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-magic me-2" style="color:var(--g-red);"></i>Générer des Tables</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form method="POST">
+          {% csrf_token %}
+          <div class="g-form-group">
+            <label class="g-label">Nombre de tables</label>
+            <input type="number" name="count" class="g-input" placeholder="Ex: 10" min="1" required>
+          </div>
+          <div class="g-form-group">
+            <label class="g-label">Forme</label>
+            <select name="shape" class="g-select">
+              <option value="round">Ronde</option>
+              <option value="square">Carrée</option>
+              <option value="rectangle">Rectangulaire</option>
+            </select>
+          </div>
+          <div class="g-form-group">
+            <label class="g-label">Capacité par table</label>
+            <input type="number" name="capacity" class="g-input" placeholder="Ex: 8" min="1" required>
+          </div>
+          <button type="submit" name="generate_tables" class="g-btn g-btn-primary w-100" style="margin-top:8px;" id="btnDoGenTables">
+            <i class="bi bi-magic"></i> Générer automatiquement
+          </button>
+        </form>
+        <p style="font-size:.76rem;color:rgba(255,255,255,.4);text-align:center;margin-top:12px;">Crée des tables numérotées à la suite des existantes.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Modifier table -->
+<div class="modal fade g-modal" id="editTableModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-pencil-square me-2" style="color:var(--g-red);"></i>Modifier la Table</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form method="POST" id="editTableForm" action="">
+          {% csrf_token %}
+          <div class="g-form-group"><label class="g-label">Numéro</label><input type="text" name="numero" id="editTableNumero" class="g-input" required></div>
+          <div class="g-form-group"><label class="g-label">Titre / Tag</label><input type="text" name="nom" id="editTableNom" class="g-input" placeholder="Ex: VIP"></div>
+          <div class="g-form-group">
+            <label class="g-label">Forme</label>
+            <select name="shape" id="editTableShape" class="g-select">
+              <option value="round">Ronde</option>
+              <option value="square">Carrée</option>
+              <option value="rectangle">Rectangulaire</option>
+            </select>
+          </div>
+          <div class="g-form-group"><label class="g-label">Couleur du tag</label><input type="color" name="color" id="editTableColor" class="g-input" style="height:48px;cursor:pointer;" title="Choisir une couleur"></div>
+          <div class="g-form-group"><label class="g-label">Capacité</label><input type="number" name="nombre_de_places" id="editTableCapacity" class="g-input" min="1" required></div>
+          <button type="submit" class="g-btn g-btn-primary w-100" style="margin-top:8px;">
+            <i class="bi bi-check-lg"></i> Enregistrer les modifications
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Placer invité (legacy) -->
+<div class="modal fade g-modal" id="addGuestModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-person-plus me-2" style="color:var(--g-red);"></i>Placer un invité</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form method="POST">
+          {% csrf_token %}
+          {{ invite_form.as_p }}
+          <button type="submit" name="add_invite_to_table" class="g-btn g-btn-primary w-100" style="margin-top:8px;">
+            <i class="bi bi-check-lg"></i> Enregistrer
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Résultat QR -->
+<div class="modal fade g-modal" id="qrResultModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content" style="text-align:center;">
+      <div class="modal-body" style="padding:32px 24px;">
+        <div id="qrIconStatus" style="margin-bottom:14px;font-size:2.5rem;"></div>
+        <h5 style="font-weight:800;color:var(--g-white);margin-bottom:8px;">Résultat du Scan</h5>
+        <p id="qrResultContent" style="color:rgba(255,255,255,.6);font-size:.88rem;margin-bottom:20px;">Scan en cours...</p>
+        <button type="button" class="g-btn g-btn-ghost" style="width:100%;" data-bs-dismiss="modal">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+
+<script>
+  function filterGuests() {
+    let input = document.getElementById("guestSearch");
+    let filter = input.value.toUpperCase();
+    let ul = document.getElementById("unassigned-list");
+    let items = ul.querySelectorAll('.guest-item');
+    items.forEach(function(item) {
+      let txtValue = item.textContent || item.innerText;
+      item.style.display = txtValue.toUpperCase().indexOf(filter) > -1 ? "flex" : "none";
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const unassignedList = document.getElementById('unassigned-list');
+
+    new Sortable(unassignedList, {
+      group: 'shared', animation: 150, sort: false,
+      onEnd: function (evt) { handleDrop(evt); }
+    });
+
+    document.querySelectorAll('.sortable-list:not(#unassigned-list)').forEach(function (el) {
+      new Sortable(el, {
+        group: 'shared', animation: 150,
+        onEnd: function (evt) { handleDrop(evt); }
+      });
+    });
+  });
+
+  function handleDrop(evt) {
+    const itemEl = evt.item;
+    const toEl = evt.to;
+    const fromEl = evt.from;
+    if (toEl === fromEl) return;
+
+    const guestId = itemEl.getAttribute('data-guest-id');
+    const tableId = toEl.getAttribute('data-table-id');
+
+    checkEmptyState(fromEl);
+    checkEmptyState(toEl);
+
+    const avatar = itemEl.querySelector('.g-invite-avatar');
+    if (avatar) {
+      if (toEl.id === 'unassigned-list') {
+        avatar.classList.add('unassigned');
+      } else {
+        avatar.classList.remove('unassigned');
+      }
+    }
+
+    fetch("{% url 'guests:move_guest' %}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
+      body: JSON.stringify({ guest_id: guestId, table_id: tableId ? tableId : null })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.status !== 'success') {
+        alert("Erreur: " + data.message);
+        location.reload();
+      } else {
+        if (data.moved_guests) {
+          data.moved_guests.forEach(mid => {
+            if (mid == guestId) return;
+            const partnerEl = document.querySelector(`li[data-guest-id="${mid}"]`);
+            if (partnerEl && toEl) {
+              toEl.appendChild(partnerEl);
+              const av = partnerEl.querySelector('.g-invite-avatar');
+              if (av) {
+                if (toEl.id === 'unassigned-list') av.classList.add('unassigned');
+                else av.classList.remove('unassigned');
+              }
+            }
+          });
+        }
+        if (data.updated_tables) {
+          data.updated_tables.forEach(stats => updateTableUI(stats));
+        } else {
+          if (data.old_table) updateTableUI(data.old_table);
+          if (data.new_table) updateTableUI(data.new_table);
+        }
+        checkEmptyState(fromEl);
+        checkEmptyState(toEl);
+      }
+    })
+    .catch(error => { console.error('Error:', error); location.reload(); });
+  }
+
+  function updateTableUI(stats) {
+    const list = document.querySelector(`ul[data-table-id="${stats.id}"]`);
+    if (!list) return;
+    const card = list.closest('.g-table-card');
+    if (!card) return;
+
+    const badge = card.querySelector('.g-capbadge');
+    if (badge) {
+      const capText = stats.capacity > 0 ? stats.capacity : '∞';
+      badge.textContent = `${stats.count}/${capText}`;
+    }
+
+    const bar = card.querySelector('.js-table-progress');
+    if (bar && stats.capacity > 0) {
+      const pct = Math.min(100, (stats.count / stats.capacity) * 100);
+      bar.style.width = pct + "%";
+      bar.classList.remove('warn', 'full');
+      if (pct >= 100) bar.classList.add('full');
+      else if (pct > 80) bar.classList.add('warn');
+    }
+  }
+
+  function checkEmptyState(listEl) {
+    const emptyMsg = listEl.querySelector('.empty-msg') || listEl.querySelector('.no-guests-msg');
+    const hasItems = listEl.querySelectorAll('.guest-item').length > 0;
+    if (emptyMsg) emptyMsg.style.display = hasItems ? 'none' : 'flex';
+  }
+
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  function startQRScanner() {
+    const container = document.getElementById("my-qr-reader");
+    if (container.children.length > 0) container.innerHTML = "";
+    container.style.display = "block";
+    const scanner = new Html5Qrcode("my-qr-reader");
+    scanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 250, height: 250 } },
+      function (decodedText) {
+        scanner.stop().then(() => { container.style.display = "none"; verifyQRCode(decodedText); }).catch(err => console.error(err));
+      },
+      (errorMessage) => {}
+    ).catch(err => alert("Camera error: " + err));
+  }
+
+  function verifyQRCode(text) {
+    fetch("{% url 'guests:valider_qr_code' %}", {
+      method: "POST",
+      headers: { "X-CSRFToken": getCookie("csrftoken"), "Content-Type": "application/x-www-form-urlencoded" },
+      body: "qr_data=" + encodeURIComponent(text),
+    })
+    .then(r => r.json())
+    .then(data => {
+      const resultDiv = document.getElementById("qrResultContent");
+      const iconDiv = document.getElementById("qrIconStatus");
+      let icon = '<i class="bi bi-question-circle" style="color:rgba(255,255,255,.4);"></i>';
+      if (data.status === 'success') icon = '<i class="bi bi-check-circle-fill" style="color:#6ee7a0;"></i>';
+      else if (data.status === 'warning') icon = '<i class="bi bi-exclamation-circle-fill" style="color:#fcd34d;"></i>';
+      else icon = '<i class="bi bi-x-circle-fill" style="color:#fca5a5;"></i>';
+      iconDiv.innerHTML = icon;
+      resultDiv.innerHTML = `<strong style="color:var(--g-white);">${text}</strong><br><span>${data.message}</span>`;
+      new bootstrap.Modal(document.getElementById('qrResultModal')).show();
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.js-table-progress').forEach(bar => {
+      const count = parseInt(bar.dataset.count);
+      const capacity = parseInt(bar.dataset.capacity);
+      if (capacity > 0) {
+        const pct = Math.min(100, (count / capacity) * 100);
+        bar.style.width = pct + "%";
+        if (pct >= 100) bar.classList.add('full');
+        else if (pct > 80) bar.classList.add('warn');
+      }
+    });
+  });
+
+  function openEditTableModal(id, numero, nom, capacity, color, shape) {
+    document.getElementById('editTableForm').action = "{% url 'guests:edit_table' 0 %}".replace('0', id);
+    document.getElementById('editTableNumero').value = numero;
+    document.getElementById('editTableNom').value = nom;
+    document.getElementById('editTableCapacity').value = capacity;
+    document.getElementById('editTableColor').value = color;
+    document.getElementById('editTableShape').value = shape || 'round';
+    new bootstrap.Modal(document.getElementById('editTableModal')).show();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const editForm = document.getElementById('editTableForm');
+    if (editForm) {
+      editForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        fetch(this.action, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData })
+        .then(r => r.json())
+        .then(data => {
+          if (data.status === 'success') {
+            const t = data.table;
+            const list = document.querySelector(`ul[data-table-id="${t.id}"]`);
+            if (list) {
+              const card = list.closest('.g-table-card');
+              const titleEl = card.querySelector('h5');
+              let newLabel = `Table ${t.numero}`;
+              if (t.nom) newLabel = `${t.nom} <small style="color:rgba(255,255,255,.45);">(${t.numero})</small>`;
+              titleEl.innerHTML = newLabel;
+              const bar = card.querySelector('.js-table-progress');
+              const count = bar ? parseInt(bar.dataset.count) : 0;
+              if (bar) bar.dataset.capacity = t.capacity;
+              updateTableUI({ id: t.id, count: count, capacity: t.capacity });
+              const editBtn = card.querySelector(`button[data-id="${t.id}"]`);
+              if (editBtn) {
+                editBtn.dataset.numero = t.numero;
+                editBtn.dataset.nom = t.nom || "";
+                editBtn.dataset.capacity = t.capacity;
+                editBtn.dataset.color = t.color;
+              }
+            }
+            bootstrap.Modal.getInstance(document.getElementById('editTableModal')).hide();
+          } else {
+            alert("Erreur: " + JSON.stringify(data.errors || "Unknown error"));
+          }
+        }).catch(err => console.error(err));
+      });
+    }
+
+    document.querySelectorAll('form[action*="delete_table"]').forEach(form => {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!confirm('Supprimer cette table ?')) return;
+        fetch(this.action, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (data.status === 'success') {
+            const col = this.closest('.col-12');
+            if (col) { col.style.transition = "opacity .4s"; col.style.opacity = "0"; setTimeout(() => col.remove(), 400); }
+          } else { alert("Erreur lors de la suppression"); }
+        });
+      });
+    });
+  });
+</script>
+
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Retraite · EventQR{% endblock %}
+
+{% block content %}
+<h1 class="h4 mb-4">Retraites</h1>
+
+<div class="row g-4">
+  {% for ev in events %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body d-flex flex-column">
+          <h2 class="h5 mb-1">{{ ev.name }}</h2>
+          <div class="text-muted small mb-3">
+            {% if ev.starts_at %}Du {{ ev.starts_at|date:"d/m/Y H:i" }}{% endif %}
+            {% if ev.ends_at %} au {{ ev.ends_at|date:"d/m/Y H:i" }}{% endif %}
+          </div>
+          <p class="mb-2">
+            Chambres: {{ ev.chambres.count }} · Ateliers: {{ ev.ateliers.count }}
+          </p>
+          <div class="mt-auto">
+            <a class="btn btn-outline-primary btn-sm"
+              href="{% url 'retreat:event_detail' ev.pk %}">
+              Ouvrir
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <div class="col-12">
+      <div class="alert alert-info">Aucune retraite pour le moment.</div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invitation - {{ event.name }}</title>
+    <!-- Import des polices Google -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background-color: #0b0b0d; /* Fond par défaut */
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            color: #fff;
+        }
+
+        /* --- Animations d'Ouverture (Enveloppe 3D) --- */
+        #envelope-container {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #111, #000);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 1s ease-in-out, visibility 1s;
+        }
+
+        .envelope {
+            position: relative;
+            width: 300px;
+            height: 200px;
+            background: rgba(220, 53, 69, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            cursor: pointer;
+            transition: transform 0.5s ease;
+        }
+
+        .envelope:hover {
+            transform: scale(1.05);
+        }
+
+        .envelope-flap {
+            position: absolute;
+            top: 0; left: 0;
+            width: 0; height: 0;
+            border-left: 150px solid transparent;
+            border-right: 150px solid transparent;
+            border-top: 100px solid rgba(220, 53, 69, 0.4);
+            border-radius: 10px 10px 0 0;
+            transform-origin: top;
+            transition: transform 0.8s ease-in-out;
+            z-index: 2;
+        }
+
+        .envelope-body {
+            position: absolute;
+            bottom: 0; left: 0;
+            width: 0; height: 0;
+            border-left: 150px solid rgba(220, 53, 69, 0.2);
+            border-right: 150px solid rgba(220, 53, 69, 0.2);
+            border-bottom: 100px solid rgba(220, 53, 69, 0.3);
+            border-radius: 0 0 12px 12px;
+            z-index: 3;
+        }
+
+        .seal {
+            position: absolute;
+            top: 100px; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px; height: 50px;
+            background: linear-gradient(135deg, #dc3545, #8b111c);
+            border-radius: 50%;
+            z-index: 4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            transition: opacity 0.5s;
+        }
+
+        .open .envelope-flap {
+            transform: rotateX(180deg);
+        }
+
+        .open .seal {
+            opacity: 0;
+        }
+
+        /* --- Contenu de l'Invitation --- */
+        #invitation-content {
+            opacity: 0;
+            height: 0;
+            overflow: hidden;
+            transition: opacity 1.5s ease-in-out;
+        }
+
+        .content-visible {
+            opacity: 1 !important;
+            height: auto !important;
+            min-height: 100vh;
+        }
+        
+        /* Styles CSS injectés depuis GrapesJS */
+        {{ template.css_content|safe }}
+        
+    </style>
+</head>
+<body>
+
+    {% if template.has_envelope_animation %}
+    <div id="envelope-container" onclick="openEnvelope()">
+        <div class="envelope" id="envelope-obj">
+            <div class="envelope-flap"></div>
+            <div class="envelope-body"></div>
+            <div class="seal">OPEN</div>
+        </div>
+        <p style="position: absolute; bottom: 20%; color: #aaa; font-size: 0.9rem; letter-spacing: 2px;">Touchez pour ouvrir</p>
+    </div>
+    {% endif %}
+
+    <div id="invitation-content" class="{% if not template.has_envelope_animation %}content-visible{% endif %}">
+        <!-- Rendered HTML from GrapesJS with injected variables -->
+        {{ html_rendered|safe }}
+    </div>
+
+    {% if template.music_url %}
+    <audio id="bg-music" loop>
+        <source src="{{ template.music_url }}" type="audio/mpeg">
+    </audio>
+    {% endif %}
+
+    <script>
+        function openEnvelope() {
+            var env = document.getElementById('envelope-obj');
+            env.classList.add('open');
+            
+            // Jouer la musique si elle existe
+            var audio = document.getElementById('bg-music');
+            if (audio) {
+                audio.play().catch(e => console.log('Audio autoplay blocked', e));
+            }
+
+            setTimeout(function() {
+                var container = document.getElementById('envelope-container');
+                container.style.opacity = '0';
+                
+                var content = document.getElementById('invitation-content');
+                content.classList.add('content-visible');
+                
+                setTimeout(function() {
+                    container.style.visibility = 'hidden';
+                }, 1000);
+            }, 1000); // Wait for flap to open before fading out
+        }
+    </script>
+</body>
+</html>

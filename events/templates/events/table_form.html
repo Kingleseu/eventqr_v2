@@ -1,0 +1,12 @@
+<!doctype html>
+<html>
+<head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Table</title></head>
+<body>
+  <h1>{{ table|default:"Nouvelle table" }} — {{ event.name }}</h1>
+  <form method="post">{% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Enregistrer</button>
+  </form>
+  <p><a href="{% url 'events:detail' event.pk %}">Retour</a></p>
+</body>
+</html>

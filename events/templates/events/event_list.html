@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Événements</title></head>
+<body>
+  <h1>Événements</h1>
+  <form method="get" style="margin-bottom:10px">
+    <input type="text" name="q" placeholder="Rechercher par nom" value="{{ request.GET.q }}">
+    <select name="type">
+      <option value="">Tous les types</option>
+      <option value="WEDDING">Mariage</option>
+      <option value="RETREAT">Retraite</option>
+      <option value="CONCERT">Concert</option>
+      <option value="CONFERENCE">Conférence</option>
+    </select>
+    <button>Filtrer</button>
+    <a href="{% url 'events:create' %}">+ Nouvel événement</a>
+  </form>
+  <ul>
+    {% for e in events %}
+      <li>
+        <a href="{% url 'events:detail' e.pk %}">{{ e.name }}</a>
+        — {{ e.get_event_type_display }} — {{ e.starts_at|default:"(date ?)" }}
+        {% if not e.is_active %}<em>(inactif)</em>{% endif %}
+      </li>
+    {% empty %}
+      <li>Aucun événement</li>
+    {% endfor %}
+  </ul>
+</body>
+</html>

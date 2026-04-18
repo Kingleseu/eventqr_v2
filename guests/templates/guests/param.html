@@ -1,0 +1,31 @@
+{% extends "guests/base_guests.html" %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><strong>Changer la photo de profil</strong></div>
+      <div class="card-body">
+        <img src="https://via.placeholder.com/100" class="rounded-circle mb-3" alt="">
+        <form>
+          <input type="file" class="form-control mb-2" accept="image/*">
+          <button class="btn btn-primary" type="submit">Mettre à jour</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><strong>Changer le mot de passe</strong></div>
+      <div class="card-body">
+        <!-- Branche ton form auth si besoin -->
+        <form method="post">{% csrf_token %}
+          <div class="mb-2"><label>Ancien mot de passe</label><input type="password" class="form-control"></div>
+          <div class="mb-2"><label>Nouveau mot de passe</label><input type="password" class="form-control"></div>
+          <div class="mb-3"><label>Confirmer</label><input type="password" class="form-control"></div>
+          <button class="btn btn-primary">Changer</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

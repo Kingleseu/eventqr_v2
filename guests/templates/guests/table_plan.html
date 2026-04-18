@@ -1,0 +1,837 @@
+{% extends "guests/base_guests.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+    :root {
+        --room-bg: #f8f9fa;
+        --room-border: #cbd5e0;
+        /* Dynamic Camera Variables (Default View) */
+        --rx: 55deg;
+        --rz: 0deg;
+        --scale: 0.85;
+        --tx: 0px;
+        --ty: -50px;
+    }
+
+    .draggable-table {
+        touch-action: none;
+        cursor: grab;
+        position: absolute;
+        transform-origin: center center;
+        z-index: 10;
+        transition: transform 0.1s linear;
+        /* Smooth drag */
+    }
+
+    .table-shape {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        border: 2px solid rgba(0, 0, 0, 0.05);
+        /* Subtle border */
+        backface-visibility: hidden;
+    }
+
+    /* Shapes */
+    .shape-round {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+    }
+
+    .shape-square {
+        width: 100px;
+        height: 100px;
+        border-radius: 12px;
+    }
+
+    .shape-rectangle {
+        width: 160px;
+        height: 90px;
+        border-radius: 8px;
+    }
+
+    /* Chair Styling (Base 2D) */
+    .chair {
+        position: absolute;
+        width: 24px;
+        height: 24px;
+        background-color: #34495e;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        z-index: -1;
+        transition: all 0.3s ease;
+        pointer-events: none;
+        /* Don't block table clicks */
+    }
+
+    /* 3D MODE STYLES: ULTRA REALISTIC */
+    #room-plan {
+        /* Transition for switching modes, but instant for camera drag */
+        transition: transform 0.1s linear, background-color 0.8s, width 0.3s ease, height 0.3s ease;
+        transform-style: preserve-3d;
+        transform-origin: center center;
+        will-change: transform;
+    }
+
+    .view-3d #room-plan {
+        /* Interactive Camera Transform */
+        transform: perspective(2000px) rotateX(var(--rx)) rotateZ(var(--rz)) scale(var(--scale)) translate(var(--tx), var(--ty));
+        box-shadow: 0 50px 100px rgba(0, 0, 0, 0.3);
+        border: none !important;
+
+        /* Elegant Floor Pattern */
+        background-color: #e9ecef;
+        background-image:
+            linear-gradient(45deg, #dee2e6 25%, transparent 25%, transparent 75%, #dee2e6 75%, #dee2e6),
+            linear-gradient(45deg, #dee2e6 25%, transparent 25%, transparent 75%, #dee2e6 75%, #dee2e6);
+        background-size: 60px 60px;
+        background-position: 0 0, 30px 30px;
+    }
+
+    .view-3d .draggable-table {
+        transform: translateZ(30px);
+        transform-style: preserve-3d;
+        transition: transform 0.2s;
+        /* Less lag in 3D */
+    }
+
+    .view-3d .table-shape {
+        transform: translateZ(0);
+        /* Thick Table Effect */
+        box-shadow:
+            1px 1px 0 #bdc3c7, 2px 2px 0 #bdc3c7, 3px 3px 0 #bdc3c7,
+            4px 4px 0 #95a5a6, 5px 5px 0 #95a5a6,
+            20px 20px 40px rgba(0, 0, 0, 0.4) !important;
+        background: linear-gradient(135deg, var(--table-bg) 0%, #ecf0f1 100%);
+    }
+
+    /* REALISTIC 3D CHAIRS */
+    .view-3d .chair {
+        border-radius: 4px;
+        /* Square seat */
+        width: 20px;
+        height: 20px;
+        background-color: #34495e;
+        /* Seat Color */
+        border: none;
+        transform: translateZ(15px);
+        /* Lift seat up */
+        transform-style: preserve-3d;
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+        /* Shadow under seat */
+    }
+
+    /* Chair Backrest */
+    .view-3d .chair::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 26px;
+        /* Taller back */
+        background-color: #2c3e50;
+        /* Darker back */
+        transform-origin: bottom center;
+        transform: rotateX(-90deg) translateY(2px);
+        /* Stand up */
+        border-radius: 4px 4px 0 0;
+        box-shadow: inset 0 -2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Chair Legs (Simulated with box-shadow on a pseudo-element or simple block) */
+    /* Keeping it clean: Just Seat + Back creates a great 'L' shape isometric Look */
+    .view-3d .chair::after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: inherit;
+        transform: translateZ(-14px);
+        /* Shadow/Leg base */
+        opacity: 0.3;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Dynamic labels */
+    .view-3d .table-shape .text-center {
+        transform: translateZ(2px);
+    }
+
+    /* Enhanced Room Canvas */
+    #room-plan {
+        background-image:
+            repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(0, 0, 0, 0.03) 19px, rgba(0, 0, 0, 0.03) 20px),
+            repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(0, 0, 0, 0.03) 19px, rgba(0, 0, 0, 0.03) 20px);
+        background-size: 20px 20px;
+        transition: all 0.3s ease;
+    }
+
+    #room-plan.grid-snap-active {
+        background-image:
+            repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(102, 126, 234, 0.15) 19px, rgba(102, 126, 234, 0.15) 20px),
+            repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(102, 126, 234, 0.15) 19px, rgba(102, 126, 234, 0.15) 20px);
+    }
+
+    /* Table Hover Effects */
+    .draggable-table {
+        transition: transform 0.2s ease, filter 0.2s ease;
+    }
+
+    .draggable-table:hover .table-shape {
+        filter: brightness(1.05);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .draggable-table.selected .table-shape {
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.5) !important;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+
+        0%,
+        100% {
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.5);
+        }
+
+        50% {
+            box-shadow: 0 0 0 6px rgba(102, 126, 234, 0.3);
+        }
+    }
+
+    /* Button Hover Effects */
+    .btn {
+        transition: all 0.3s ease;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .btn:active {
+        transform: translateY(0);
+    }
+
+    #gridSnapBtn.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-color: #667eea;
+    }
+</style>
+
+<div id="plan-container" class="container-fluid py-4" style="height: 100vh; display: flex; flex-direction: column;">
+    <!-- Modern Header -->
+    <div class="text-center mb-4">
+        <div class="d-inline-block px-4 py-3 rounded-4 shadow-sm"
+            style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <h2 class="fw-bold mb-1 text-white" style="letter-spacing: 1px;">
+                <i class="bi bi-diagram-3 me-2"></i>Plan de Table
+            </h2>
+            <p class="text-white-50 mb-0 small">
+                <i class="bi bi-hand-index me-1"></i>Déplacez •
+                <i class="bi bi-mouse2 me-1"></i>Double-cliquez pour modifier
+            </p>
+        </div>
+    </div>
+
+    <!-- Control Bar -->
+    <div class="d-flex justify-content-between align-items-center mb-3 px-2">
+        <!-- Left: Stats -->
+        <div class="d-flex align-items-center gap-3">
+            <div class="badge bg-light text-dark border px-3 py-2">
+                <i class="bi bi-table me-1"></i>
+                <span id="tableCount">{{ tables|length }}</span> tables
+            </div>
+            <div class="badge bg-light text-dark border px-3 py-2">
+                <i class="bi bi-people me-1"></i>
+                <span id="totalCapacity">0</span> places
+            </div>
+        </div>
+
+        <!-- Right: Actions -->
+        <div class="d-flex align-items-center gap-2">
+            <!-- Grid Snap Toggle -->
+            <button id="gridSnapBtn" class="btn btn-sm btn-outline-secondary" title="Activer l'alignement sur grille">
+                <i class="bi bi-grid-3x3-gap me-1"></i>Grille
+            </button>
+
+            <!-- Zoom Controls -->
+            <div class="btn-group btn-group-sm" role="group">
+                <button id="zoomOutBtn" class="btn btn-outline-secondary" title="Zoom arrière">
+                    <i class="bi bi-zoom-out"></i>
+                </button>
+                <button id="zoomResetBtn" class="btn btn-outline-secondary" title="Réinitialiser zoom">
+                    <i class="bi bi-arrows-angle-contract"></i>
+                </button>
+                <button id="zoomInBtn" class="btn btn-outline-secondary" title="Zoom avant">
+                    <i class="bi bi-zoom-in"></i>
+                </button>
+            </div>
+
+            <!-- 3D Toggle -->
+            <button id="toggle3D" class="btn btn-outline-dark d-flex align-items-center shadow-sm">
+                <i class="bi bi-box me-2"></i> <span>Vue 3D</span>
+            </button>
+
+            <div class="vr"></div>
+
+            <a href="{% url 'guests:admin' %}" class="btn btn-outline-secondary shadow-sm">
+                <i class="bi bi-arrow-left me-2"></i>Retour
+            </a>
+            <button id="savePlanBtn" class="btn btn-primary shadow-sm">
+                <i class="bi bi-cloud-upload me-2"></i>Enregistrer
+            </button>
+        </div>
+    </div>
+
+    <!-- The Room (Canvas) - Scrollable Container -->
+    <div class="flex-grow-1 position-relative" id="room-container" style="overflow: auto; perspective: 1500px;">
+        <div class="card border-0 shadow-sm position-relative" id="room-plan"
+            style="background-color: var(--room-bg); border: 2px dashed var(--room-border); min-width: 100%; min-height: 100%;">
+
+            {% for t in tables %}
+            <div class="draggable-table" data-id="{{ t.id }}" data-numero="{{ t.numero }}"
+                data-nom="{{ t.nom|default:'' }}" data-shape="{{ t.shape|default:'round' }}"
+                data-capacity="{{ t.nombre_de_places }}" data-color="{{ t.color|default:'#ffffff' }}"
+                data-x="{{ t.x_pos|stringformat:'f' }}" data-y="{{ t.y_pos|stringformat:'f' }}">
+                <!-- visual table shape -->
+                <div class="table-shape shape-{{ t.shape|default:'round' }}"
+                    style="--tbl-bg: {{ t.color|default:'#ffffff' }}; background-color: var(--tbl-bg); cursor: pointer;"
+                    ondblclick="openMiniEdit('{{ t.id }}')">
+
+                    <div class="text-center p-1" style="line-height: 1.1; pointer-events: none; user-select: none;">
+                        <h6 class="fw-bold mb-0 text-truncate label-text"
+                            style="font-size: 0.85rem; max-width: 90%; color: #2c3e50;">
+                            {{ t.nom|default:t.numero }}
+                        </h6>
+                        <small class="text-muted capacity-text" style="font-size: 0.7rem;">
+                            {{ t.invites.count }}/<span class="cap-val">{{ t.nombre_de_places }}</span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+            <!-- Instruction Overlay -->
+            <div
+                class="position-absolute bottom-0 start-50 translate-middle-x mb-3 text-muted small user-select-none bg-white px-3 py-1 rounded shadow-sm opacity-75">
+                <i class="bi bi-mouse me-1"></i>Double-clic pour éditer • Glisser pour déplacer
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mini Edit Modal -->
+<div class="modal fade" id="miniEditModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="modal-title fw-bold">Modifier Table</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="miniEditForm">
+                    <input type="hidden" id="miniId">
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold text-muted mb-1">Nom / Tag</label>
+                        <input type="text" id="miniNom" class="form-control form-control-sm">
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted mb-1">Forme</label>
+                            <select id="miniShape" class="form-select form-select-sm">
+                                <option value="round">Ronde</option>
+                                <option value="square">Carrée</option>
+                                <option value="rectangle">Rect.</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted mb-1">Capacité</label>
+                            <input type="number" id="miniCapacity" class="form-control form-control-sm" min="1">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted mb-1">Couleur</label>
+                        <input type="color" id="miniColor" class="form-control form-control-color w-100"
+                            title="Choisir une couleur">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm w-100 rounded-pill">Appliquer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Interact.js -->
+<script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+<script>
+    const saveUrl = "{% url 'guests:save_table_positions' %}";
+    const editUrlTemplate = "{% url 'guests:edit_table' 0 %}";
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const room = document.getElementById('room-plan');
+        const container = document.getElementById('plan-container');
+        const toggleBtn = document.getElementById('toggle3D');
+
+        // --- 3D Camera State ---
+        let is3D = false;
+        let isDragging = false;
+        let startX, startY;
+        let camState = {
+            rx: 55, rz: 0, scale: 0.85, tx: 0, ty: -50
+        };
+
+        function updateCamera() {
+            if (!is3D) return;
+            room.style.setProperty('--rx', `${camState.rx}deg`);
+            room.style.setProperty('--rz', `${camState.rz}deg`);
+            room.style.setProperty('--scale', camState.scale);
+            room.style.setProperty('--tx', `${camState.tx}px`);
+            room.style.setProperty('--ty', `${camState.ty}px`);
+        }
+
+        // --- Grid Snap Feature ---
+        let gridSnapEnabled = false;
+        const gridSize = 20; // pixels
+        const gridSnapBtn = document.getElementById('gridSnapBtn');
+
+        if (gridSnapBtn) {
+            gridSnapBtn.addEventListener('click', () => {
+                gridSnapEnabled = !gridSnapEnabled;
+                gridSnapBtn.classList.toggle('active');
+                room.classList.toggle('grid-snap-active');
+            });
+        }
+
+        function snapToGrid(value) {
+            if (!gridSnapEnabled) return value;
+            return Math.round(value / gridSize) * gridSize;
+        }
+
+        // --- Stats Calculation ---
+        function updateStats() {
+            const tables = document.querySelectorAll('.draggable-table');
+            let totalCapacity = 0;
+
+            tables.forEach(table => {
+                totalCapacity += parseInt(table.dataset.capacity) || 0;
+            });
+
+            const capacityEl = document.getElementById('totalCapacity');
+            if (capacityEl) capacityEl.textContent = totalCapacity;
+        }
+
+        // --- Table Selection ---
+        let selectedTable = null;
+
+        function selectTable(tableEl) {
+            if (selectedTable) {
+                selectedTable.classList.remove('selected');
+            }
+            selectedTable = tableEl;
+            if (selectedTable) {
+                selectedTable.classList.add('selected');
+            }
+        }
+
+        // --- Dynamic Room Canvas Expansion ---
+        let currentRoomSize = 1.0;
+        const baseWidth = 800;
+        const baseHeight = 600;
+
+        function calculateOptimalRoomSize() {
+            const tableCount = document.querySelectorAll('.draggable-table').length;
+            if (tableCount <= 5) return 1.0;
+            if (tableCount <= 10) return 1.5;
+            if (tableCount <= 15) return 2.0;
+            if (tableCount <= 20) return 2.5;
+            return 3.0;
+        }
+
+        function applyRoomSize(sizeMultiplier) {
+            currentRoomSize = Math.max(1.0, Math.min(4.0, sizeMultiplier));
+
+            if (!is3D) {
+                const newWidth = baseWidth * currentRoomSize;
+                const newHeight = baseHeight * currentRoomSize;
+
+                room.style.width = `${newWidth}px`;
+                room.style.height = `${newHeight}px`;
+            }
+        }
+
+        function resetRoomSize() {
+            applyRoomSize(calculateOptimalRoomSize());
+        }
+
+        const zoomInBtn = document.getElementById('zoomInBtn');
+        const zoomOutBtn = document.getElementById('zoomOutBtn');
+        const zoomResetBtn = document.getElementById('zoomResetBtn');
+
+        if (zoomInBtn) zoomInBtn.addEventListener('click', () => applyRoomSize(currentRoomSize + 0.5)); // Zoom In = Agrandir
+        if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => applyRoomSize(currentRoomSize - 0.5)); // Zoom Out = Réduire
+        if (zoomResetBtn) zoomResetBtn.addEventListener('click', () => resetRoomSize());
+
+        // --- Interact.js (2D Drag with Grid Snap) ---
+        let interactable = interact('.draggable-table').draggable({
+            ignoreFrom: '.table-shape', // Don't start drag from table shape (allow double-click)
+            modifiers: [
+                interact.modifiers.restrictRect({
+                    restriction: 'parent',
+                    endOnly: true
+                }),
+                interact.modifiers.snap({
+                    targets: [
+                        interact.snappers.grid({
+                            x: gridSize,
+                            y: gridSize,
+                            range: Infinity,
+                            offset: { x: 0, y: 0 }
+                        })
+                    ],
+                    relativePoints: [{ x: 0, y: 0 }],
+                    enabled: () => gridSnapEnabled
+                })
+            ],
+            autoScroll: true,
+            listeners: {
+                move: dragMoveListener,
+                start: (event) => {
+                    selectTable(event.target);
+                }
+            }
+        });
+
+
+        // --- Initial Render ---
+        document.querySelectorAll('.draggable-table').forEach(el => {
+            el.style.left = el.dataset.x + '%';
+            el.style.top = el.dataset.y + '%';
+            renderChairs(el);
+
+            // Add double-click handler to table shape
+            const tableShape = el.querySelector('.table-shape');
+            if (tableShape) {
+                tableShape.addEventListener('dblclick', (e) => {
+                    e.stopPropagation(); // Prevent event bubbling
+                    const tableId = el.dataset.id;
+                    if (window.openMiniEdit) {
+                        window.openMiniEdit(tableId);
+                    }
+                });
+            }
+        });
+
+        // Calculate initial stats
+        updateStats();
+        resetRoomSize(); // Auto-size room canvas based on table count
+
+        // --- 3D Toggle Logic ---
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                container.classList.toggle('view-3d');
+                is3D = container.classList.contains('view-3d');
+
+                if (is3D) {
+                    toggleBtn.innerHTML = '<i class="bi bi-box-fill me-2"></i> <span>Vue 2D</span>';
+                    toggleBtn.classList.replace('btn-outline-dark', 'btn-dark');
+                    interactable.draggable(false);
+
+                    // Reset Camera & room dimensions
+                    camState = { rx: 55, rz: 0, scale: 0.85, tx: 0, ty: -50 };
+                    updateCamera();
+                    room.style.width = '';
+                    room.style.height = '';
+                } else {
+                    toggleBtn.innerHTML = '<i class="bi bi-box me-2"></i> <span>Vue 3D</span>';
+                    toggleBtn.classList.replace('btn-dark', 'btn-outline-dark');
+                    interactable.draggable(true);
+
+                    // Reset 3D transform and reapply room size
+                    room.style.transform = '';
+                    applyRoomSize(currentRoomSize);
+                }
+            });
+        }
+
+        // --- 3D Visual Control (Mouse Events) ---
+        container.addEventListener('mousedown', (e) => {
+            if (!is3D) return;
+            // Allow clicking tables to not start drag if we want selection later, 
+            // but for now, background drag rotates.
+            if (e.target.closest('.draggable-table')) return;
+
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            container.style.cursor = 'grabbing';
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging || !is3D) return;
+
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+
+            // Logic: 
+            // Left/Right -> Rotate Z (Space rotation)
+            // Up/Down -> Rotate X (Tilt) or Pan if Shift key
+
+            if (e.shiftKey || e.button === 2) {
+                // Pan
+                camState.tx += dx;
+                camState.ty += dy;
+            } else {
+                // Rotate
+                camState.rz -= dx * 0.5; // Inverse feel usually better
+                camState.rx += dy * 0.5;
+                // Clamp Tilt
+                camState.rx = Math.max(0, Math.min(90, camState.rx));
+            }
+
+            startX = e.clientX;
+            startY = e.clientY;
+            updateCamera();
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+            if (is3D) container.style.cursor = 'auto';
+        });
+
+        container.addEventListener('wheel', (e) => {
+            if (!is3D) return;
+            e.preventDefault();
+            const zoomAmount = e.deltaY * -0.001;
+            camState.scale += zoomAmount;
+            camState.scale = Math.max(0.2, Math.min(3, camState.scale));
+            updateCamera();
+        }, { passive: false });
+
+
+        // --- Edit Modal Logic ---
+        const editModalEl = document.getElementById('miniEditModal');
+        let editModal = null;
+        if (editModalEl) editModal = new bootstrap.Modal(editModalEl);
+        const editForm = document.getElementById('miniEditForm');
+
+        window.openMiniEdit = function (id) {
+            const el = document.querySelector(`.draggable-table[data-id="${id}"]`);
+            if (!el) return;
+
+            document.getElementById('miniId').value = id;
+            document.getElementById('miniNom').value = el.dataset.nom;
+            document.getElementById('miniShape').value = el.dataset.shape;
+            document.getElementById('miniCapacity').value = el.dataset.capacity;
+            document.getElementById('miniColor').value = el.dataset.color;
+
+            if (editModal) editModal.show();
+        };
+
+        if (editForm) {
+            editForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const id = document.getElementById('miniId').value;
+                const nom = document.getElementById('miniNom').value;
+                const shape = document.getElementById('miniShape').value;
+                const capacity = document.getElementById('miniCapacity').value;
+                const color = document.getElementById('miniColor').value;
+                const num = document.querySelector(`.draggable-table[data-id="${id}"]`).dataset.numero;
+
+                const fd = new FormData();
+                fd.append('numero', num);
+                fd.append('nom', nom);
+                fd.append('shape', shape);
+                fd.append('nombre_de_places', capacity);
+                fd.append('color', color);
+
+                fetch(editUrlTemplate.replace('0', id), {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': '{{ csrf_token }}' },
+                    body: fd
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            const t = data.table;
+                            const el = document.querySelector(`.draggable-table[data-id="${t.id}"]`);
+
+                            el.dataset.nom = t.nom;
+                            el.dataset.shape = t.shape;
+                            el.dataset.capacity = t.capacity;
+                            el.dataset.color = t.color;
+
+                            const shapeDiv = el.querySelector('.table-shape');
+                            shapeDiv.classList.remove('shape-round', 'shape-square', 'shape-rectangle');
+                            shapeDiv.classList.add(`shape-${t.shape}`);
+                            shapeDiv.style.backgroundColor = t.color;
+
+                            const label = t.nom ? t.nom : t.numero;
+                            el.querySelector('.label-text').innerText = label;
+                            el.querySelector('.cap-val').innerText = t.capacity;
+
+                            renderChairs(el);
+                            if (editModal) editModal.hide();
+                        } else {
+                            alert('Erreur: ' + JSON.stringify(data.errors));
+                        }
+                    })
+                    .catch(err => console.error(err));
+            });
+        }
+
+        // --- Advanced Chair Rendering (Perimeter Walk) ---
+        function renderChairs(tableEl) {
+            const shape = tableEl.dataset.shape || 'round';
+            const capacity = parseInt(tableEl.dataset.capacity) || 0;
+            tableEl.querySelectorAll('.chair').forEach(c => c.remove());
+
+            let width = 100;
+            let height = 100;
+            if (shape === 'rectangle') { width = 160; height = 90; }
+
+            const offset = 10; // Distance from edge (Radius offset or Gap)
+
+            if (shape === 'round') {
+                const radius = (width / 2) + offset + 5;
+                const angleStep = (2 * Math.PI) / capacity;
+                for (let i = 0; i < capacity; i++) {
+                    const angle = (i * angleStep) - (Math.PI / 2);
+                    const cx = radius * Math.cos(angle);
+                    const cy = radius * Math.sin(angle);
+                    // Rotation for 3D orientation (facing center)
+                    const rot = (angle * 180 / Math.PI) + 270;
+                    createChair(tableEl, cx, cy, width, height, rot);
+                }
+            } else {
+                // Smart Side Distribution for Square/Rectangle
+                const halfW = width / 2;
+                const halfH = height / 2;
+
+                // Calculate how many chairs per side based on table dimensions
+                const ratio = width / (width + height);
+                const horizontalShare = Math.round((capacity / 2) * ratio);
+
+                let countTop = horizontalShare;
+                let countBottom = horizontalShare;
+                let remaining = capacity - countTop - countBottom;
+
+                // Safety check
+                if (remaining < 0) {
+                    countBottom += remaining;
+                    remaining = 0;
+                }
+
+                let countLeft = Math.floor(remaining / 2);
+                let countRight = remaining - countLeft;
+
+                // Helper function to place chairs on a side
+                const placeSide = (side, count) => {
+                    if (count <= 0) return;
+
+                    const len = (side === 'top' || side === 'bottom') ? width : height;
+                    const step = len / (count + 1);
+
+                    for (let i = 1; i <= count; i++) {
+                        const pos = i * step;
+                        let x, y, rot;
+
+                        if (side === 'top') {
+                            x = -halfW + pos;
+                            y = -halfH - offset;
+                            rot = 180; // Face down
+                        } else if (side === 'bottom') {
+                            x = -halfW + pos;
+                            y = halfH + offset;
+                            rot = 0; // Face up
+                        } else if (side === 'left') {
+                            x = -halfW - offset;
+                            y = -halfH + pos;
+                            rot = 90; // Face right
+                        } else if (side === 'right') {
+                            x = halfW + offset;
+                            y = -halfH + pos;
+                            rot = -90; // Face left
+                        }
+
+                        createChair(tableEl, x, y, width, height, rot);
+                    }
+                };
+
+                placeSide('top', countTop);
+                placeSide('bottom', countBottom);
+                placeSide('left', countLeft);
+                placeSide('right', countRight);
+            }
+        }
+
+        function createChair(parent, x, y, tableW, tableH, rotation) {
+            const chair = document.createElement('div');
+            chair.className = 'chair';
+
+            // Center Refs
+            const centerX = tableW / 2;
+            const centerY = tableH / 2;
+
+            // Pos relative to Top-Left of Table Wrapper
+            const finalX = centerX + x - 10; // -10 = half chair width
+            const finalY = centerY + y - 10;
+
+            chair.style.left = finalX + 'px';
+            chair.style.top = finalY + 'px';
+
+            // Rotation for alignment (important for 3D Chair backrest)
+            chair.style.transform += ` rotateZ(${rotation}deg)`;
+
+            // In 3D mode, the class .view-3d .chair adds translateZ. 
+            // The rotateZ here rotates the chair around its vertical axis (in 3D space since Z is up).
+
+            parent.appendChild(chair);
+        }
+
+        function dragMoveListener(event) {
+            var target = event.target;
+            var x = (parseFloat(target.getAttribute('data-tx')) || 0) + event.dx;
+            var y = (parseFloat(target.getAttribute('data-ty')) || 0) + event.dy;
+            target.style.transform = `translate(${x}px, ${y}px)`;
+            target.setAttribute('data-tx', x);
+            target.setAttribute('data-ty', y);
+        }
+
+        // Save Btn Logic (Kept same)
+        const saveBtn = document.getElementById('savePlanBtn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                const originalText = saveBtn.innerHTML;
+                saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+                saveBtn.disabled = true;
+                const updates = [];
+                const roomRect = room.getBoundingClientRect();
+                document.querySelectorAll('.draggable-table').forEach(el => {
+                    const elRect = el.getBoundingClientRect();
+                    const relLeft = elRect.left - roomRect.left;
+                    const relTop = elRect.top - roomRect.top;
+                    const xPct = (relLeft / roomRect.width) * 100;
+                    const yPct = (relTop / roomRect.height) * 100;
+                    updates.push({
+                        id: el.dataset.id, x: xPct.toFixed(4), y: yPct.toFixed(4)
+                    });
+                });
+                fetch(saveUrl, {
+                    method: "POST", headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" },
+                    body: JSON.stringify({ positions: updates })
+                }).then(r => r.json()).then(data => {
+                    if (data.status === 'success') location.reload(); else { alert("Erreur: " + data.message); saveBtn.innerHTML = originalText; saveBtn.disabled = false; }
+                }).catch(err => { console.error(err); alert("Erreur réseau"); saveBtn.innerHTML = originalText; saveBtn.disabled = false; });
+            });
+        }
+    });
+</script>
+{% endblock %}

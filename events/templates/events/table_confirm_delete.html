@@ -1,0 +1,11 @@
+<!doctype html>
+<html>
+<head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Supprimer table</title></head>
+<body>
+  <h1>Supprimer la table {{ table.label }} — {{ event.name }}</h1>
+  <form method="post">{% csrf_token %}
+    <button type="submit">Oui, supprimer</button>
+  </form>
+  <p><a href="{% url 'events:detail' event.pk %}">Annuler</a></p>
+</body>
+</html>

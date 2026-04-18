@@ -1,0 +1,2211 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studio d'Invitation — {{ event.name }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --red: #dc3545;
+            --red-glow: rgba(220, 53, 69, 0.3);
+            --gold: #c9a84c;
+            --gold-light: #e8d5a3;
+            --black: #080810;
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text: #f0f0f0;
+            --text-muted: rgba(255, 255, 255, 0.5);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--black);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ============ PARTICLES BG ============ */
+        #particles {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none; z-index: 0;
+            overflow: hidden;
+        }
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            animation: float linear infinite;
+            opacity: 0;
+        }
+        @keyframes float {
+            0%   { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10%  { opacity: 0.6; }
+            90%  { opacity: 0.3; }
+            100% { transform: translateY(-20px) rotate(720deg); opacity: 0; }
+        }
+
+        /* ============ TOP BAR ============ */
+        #studio-topbar {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            height: 64px;
+            background: rgba(8, 8, 16, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+        }
+        .topbar-brand {
+            display: flex; align-items: center; gap: 12px;
+        }
+        .topbar-brand .icon {
+            width: 36px; height: 36px;
+            background: linear-gradient(135deg, var(--red), #8b111c);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px;
+        }
+        .topbar-brand h1 {
+            font-size: 1rem; font-weight: 600;
+            line-height: 1.2;
+        }
+        .topbar-brand span {
+            display: block;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+        .topbar-actions { display: flex; align-items: center; gap: 10px; }
+        .btn-topbar {
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex; align-items: center; gap: 6px;
+            text-decoration: none;
+            font-family: 'Inter', sans-serif;
+        }
+        .btn-ghost { background: var(--glass); border: 1px solid var(--glass-border); color: var(--text); }
+        .btn-ghost:hover { background: rgba(255,255,255,0.1); }
+        .btn-red { background: linear-gradient(135deg, var(--red), #b91c2c); color: #fff; box-shadow: 0 0 20px var(--red-glow); }
+        .btn-red:hover { transform: translateY(-1px); box-shadow: 0 6px 25px var(--red-glow); }
+
+        /* ============ MAIN LAYOUT ============ */
+        .studio-main {
+            padding-top: 64px;
+            min-height: 100vh;
+            display: flex;
+        }
+
+
+        /* ============ STEP PANEL (LEFT) ============ */
+        #step-panel {
+            width: 420px;
+            min-width: 380px;
+            background: rgba(10, 10, 20, 0.7);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--glass-border);
+            height: calc(100vh - 64px);
+            overflow-y: auto;
+            position: sticky;
+            top: 64px;
+            padding: 28px 24px;
+        }
+        #step-panel::-webkit-scrollbar { width: 4px; }
+        #step-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+        /* Step indicator */
+        .steps-indicator {
+            display: flex; align-items: center; gap: 0;
+            margin-bottom: 28px;
+        }
+        .step-dot {
+            flex: 1;
+            display: flex; flex-direction: column; align-items: center;
+            position: relative;
+            cursor: pointer;
+        }
+        .step-dot-circle {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.2);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.75rem; font-weight: 700;
+            color: var(--text-muted);
+            transition: all 0.3s;
+            background: rgba(255,255,255,0.05);
+            z-index: 2;
+        }
+        .step-dot.active .step-dot-circle {
+            border-color: var(--red);
+            background: var(--red);
+            color: #fff;
+            box-shadow: 0 0 16px var(--red-glow);
+        }
+        .step-dot.done .step-dot-circle {
+            border-color: #22c55e;
+            background: #22c55e;
+            color: #fff;
+        }
+        .step-dot-label {
+            font-size: 0.65rem; color: var(--text-muted);
+            margin-top: 5px; text-align: center;
+            font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase;
+        }
+        .step-dot.active .step-dot-label { color: var(--red); }
+        .step-connector {
+            flex: 1; height: 2px;
+            background: rgba(255,255,255,0.08);
+            position: relative; top: -12px;
+            transition: background 0.3s;
+        }
+        .step-connector.done { background: #22c55e; }
+
+        /* Step content */
+        .step-content { display: none; }
+        .step-content.active { display: block; }
+
+        .step-title {
+            font-size: 1.3rem; font-weight: 700; margin-bottom: 4px;
+        }
+        .step-subtitle {
+            color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px; line-height: 1.5;
+        }
+
+        /* Form elements */
+        .form-group { margin-bottom: 18px; }
+        .form-label {
+            display: block; font-size: 0.78rem; font-weight: 600;
+            color: rgba(255,255,255,0.7); margin-bottom: 7px;
+            letter-spacing: 0.5px; text-transform: uppercase;
+        }
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px;
+            padding: 11px 14px;
+            color: var(--text);
+            font-size: 0.9rem;
+            font-family: 'Inter', sans-serif;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-textarea { resize: vertical; min-height: 80px; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--red);
+            box-shadow: 0 0 0 3px rgba(220,53,69,0.15);
+        }
+        .form-select option { background: #1a1a2e; }
+        .form-input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+        /* ============ GALLERY HEADER ============ */
+        .gallery-header {
+            padding: 0 0 24px 0;
+        }
+        .gallery-title {
+            font-size: 1.35rem; font-weight: 800;
+            margin-bottom: 6px;
+            background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .gallery-subtitle {
+            font-size: 0.82rem; color: var(--text-muted); margin-bottom: 18px; line-height: 1.5;
+        }
+
+        /* ============ FILTER TABS ============ */
+        .template-filter-tabs {
+            display: flex; gap: 6px; margin-bottom: 20px;
+            flex-wrap: nowrap; overflow-x: auto;
+            padding-bottom: 4px;
+            scrollbar-width: none;
+        }
+        .template-filter-tabs::-webkit-scrollbar { display: none; }
+        .filter-tab {
+            padding: 7px 15px; border-radius: 30px;
+            font-size: 0.72rem; font-weight: 700; cursor: pointer; white-space: nowrap;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.55);
+            transition: all 0.25s; letter-spacing: 0.5px; flex-shrink: 0;
+        }
+        .filter-tab.active {
+            background: var(--red); border-color: var(--red); color: #fff;
+            box-shadow: 0 0 16px rgba(220,53,69,0.35);
+        }
+        .filter-tab:hover:not(.active) { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); color: #fff; }
+
+        /* ============ THEMES GRID — PORTRAIT STYLE ============ */
+        .themes-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+
+        /* Theme item = label + card */
+        .theme-item {
+            display: flex; flex-direction: column; gap: 7px;
+            cursor: pointer;
+            animation: cardAppear 0.35s ease both;
+        }
+        .theme-item-label {
+            font-size: 0.73rem; font-weight: 700;
+            color: rgba(255,255,255,0.75);
+            letter-spacing: 0.2px;
+            padding: 0 2px;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .theme-item-label .lbl-emoji { font-size: 0.85rem; }
+
+        /* Card itself — portrait ratio */
+        .theme-card {
+            border-radius: 16px; overflow: hidden; cursor: pointer;
+            border: 2px solid rgba(255,255,255,0.06);
+            transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            aspect-ratio: 9 / 14;
+            min-height: 200px;
+        }
+        .theme-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            border-color: rgba(255,255,255,0.2);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+        }
+        .theme-card.selected {
+            border-color: var(--red) !important;
+            box-shadow: 0 0 0 3px rgba(220,53,69,0.35), 0 20px 50px rgba(0,0,0,0.6);
+        }
+        .theme-card.selected .theme-check { opacity: 1; transform: scale(1); }
+        .theme-card.selected .theme-hover-overlay { opacity: 0 !important; } /* don't show overlay when selected */
+
+        /* Checkmark badge */
+        .theme-check {
+            position: absolute; top: 8px; right: 8px; z-index: 30;
+            width: 26px; height: 26px;
+            background: var(--red);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 12px; color: #fff; font-weight: 900;
+            opacity: 0; transform: scale(0);
+            transition: all 0.35s cubic-bezier(0.34,1.56,0.64,1);
+            box-shadow: 0 4px 12px rgba(220,53,69,0.5);
+        }
+
+        /* Category badge top-left */
+        .theme-badge-tag {
+            position: absolute; top: 8px; left: 8px; z-index: 25;
+            padding: 3px 8px; border-radius: 12px; font-size: 0.58rem;
+            font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase;
+            backdrop-filter: blur(4px);
+        }
+        .tag-animated { background: rgba(220,53,69,0.85); color: #fff; }
+        .tag-floral { background: rgba(70,160,90,0.85); color: #fff; }
+        .tag-gold { background: rgba(201,168,76,0.9); color: #111; }
+        .tag-minimal { background: rgba(255,255,255,0.75); color: #1a1a2e; }
+        .tag-new { background: rgba(80,140,255,0.85); color: #fff; }
+        .tag-dark { background: rgba(20,20,20,0.85); color: rgba(255,255,255,0.9); border: 1px solid rgba(255,255,255,0.15); }
+        .tag-video { background: rgba(160,60,220,0.85); color: #fff; }
+
+        /* Hover overlay slide-up */
+        .theme-hover-overlay {
+            position: absolute; inset: 0; z-index: 20;
+            display: flex; align-items: flex-end; justify-content: center;
+            padding: 14px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.1) 60%, transparent 100%);
+            pointer-events: none;
+        }
+        .theme-card:hover .theme-hover-overlay { opacity: 1; }
+        .hover-cta {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 30px;
+            padding: 8px 18px;
+            font-size: 0.75rem; font-weight: 700;
+            color: #fff; letter-spacing: 0.5px;
+            transform: translateY(10px);
+            transition: transform 0.3s ease;
+            white-space: nowrap;
+        }
+        .theme-card:hover .hover-cta { transform: translateY(0); }
+
+        /* ======= CARD BODY — Miniature invitation ======= */
+        .theme-preview {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 12px 10px;
+            overflow: hidden;
+        }
+        .theme-preview-deco {
+            font-size: 1.1rem; margin-bottom: 5px; opacity: 0.7; position: relative; z-index: 5;
+        }
+        .theme-preview-badge {
+            font-size: 0.42rem; letter-spacing: 1.5px; text-transform: uppercase;
+            padding: 2px 6px; border-radius: 8px; border: 1px solid;
+            margin-bottom: 7px; position: relative; z-index: 5;
+        }
+        .theme-preview-content {
+            position: relative; z-index: 5; text-align: center;
+        }
+        .theme-preview-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 0.92rem; font-style: italic; line-height: 1.25;
+        }
+        .theme-preview-and {
+            font-size: 0.6rem; opacity: 0.5; letter-spacing: 1px;
+            margin: 2px 0; display: block;
+        }
+        .theme-preview-name2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 0.78rem; font-style: italic; opacity: 0.85;
+        }
+        .theme-preview-hr {
+            width: 30px; height: 1px; border: none;
+            margin: 7px auto; opacity: 0.4;
+        }
+        .theme-preview-date {
+            font-size: 0.5rem; letter-spacing: 2px; opacity: 0.7;
+            margin-top: 3px; text-transform: uppercase;
+        }
+        .theme-preview-rsvp {
+            margin-top: 10px;
+            padding: 5px 12px; border-radius: 20px;
+            font-size: 0.45rem; letter-spacing: 1px; font-weight: 700;
+            border: none; cursor: default;
+            position: relative; z-index: 5;
+        }
+
+        /* ======= PER-TEMPLATE BACKGROUNDS ======= */
+
+        /* Rose Éternelle */
+        .tpl-rose .theme-preview { background: linear-gradient(160deg, #1a050a 0%, #2d0813 50%, #1a050a 100%); }
+        .tpl-rose .theme-preview-name { color: #f0b8c8; }
+        .tpl-rose .theme-preview-name2 { color: #e898b0; }
+        .tpl-rose .theme-preview-hr { background: #7a3535; }
+        .tpl-rose .theme-preview-badge { color: #c48080; border-color: rgba(196,128,128,0.4); background: rgba(122,53,53,0.2); }
+        .tpl-rose .theme-preview-date { color: #d4708a; }
+        .tpl-rose .theme-preview-rsvp { background: linear-gradient(135deg, #dc3545, #8b111c); color: #fff; box-shadow: 0 3px 10px rgba(220,53,69,0.4); }
+
+        /* Particules */
+        .petal {
+            position: absolute; width: 6px; height: 10px;
+            background: rgba(220,80,100,0.6); border-radius: 50% 20% 50% 20%;
+            animation: petalFall linear infinite; z-index: 2;
+        }
+        @keyframes petalFall {
+            0% { transform: translateY(-20px) rotate(0deg) translateX(0); opacity: 0.8; }
+            100% { transform: translateY(300px) rotate(360deg) translateX(20px); opacity: 0; }
+        }
+
+        /* Or & Lumière */
+        .tpl-gold .theme-preview { background: linear-gradient(160deg, #080600 0%, #1a1000 50%, #0d0900 100%); }
+        .tpl-gold .theme-preview-name { color: #e8c86a; }
+        .tpl-gold .theme-preview-name2 { color: #d4a840; }
+        .tpl-gold .theme-preview-hr { background: #7a6a20; }
+        .tpl-gold .theme-preview-badge { color: #c9a84c; border-color: rgba(201,168,76,0.3); background: rgba(201,168,76,0.1); }
+        .tpl-gold .theme-preview-date { color: #c9a84c; }
+        .tpl-gold .theme-preview-rsvp { background: linear-gradient(135deg, #c9a84c, #9a7830); color: #111; }
+        .gold-particle {
+            position: absolute; border-radius: 50%;
+            background: radial-gradient(circle, #e8c86a, transparent);
+            animation: goldFloat ease-in-out infinite; z-index: 2;
+        }
+        @keyframes goldFloat {
+            0%,100% { transform: translateY(0) scale(1); opacity: 0.5; }
+            50% { transform: translateY(-12px) scale(1.3); opacity: 1; }
+        }
+
+        /* Jardin Floral */
+        .tpl-garden .theme-preview { background: linear-gradient(160deg, #030a03 0%, #071407 50%, #030a03 100%); }
+        .tpl-garden .theme-preview-name { color: #a0e8a0; }
+        .tpl-garden .theme-preview-name2 { color: #80c880; }
+        .tpl-garden .theme-preview-hr { background: #3a7a3a; }
+        .tpl-garden .theme-preview-badge { color: #7acc7a; border-color: rgba(90,170,90,0.3); background: rgba(90,170,90,0.1); }
+        .tpl-garden .theme-preview-date { color: #7ec87e; }
+        .tpl-garden .theme-preview-rsvp { background: linear-gradient(135deg, #5aaa5a, #327832); color: #fff; }
+        .flower { position: absolute; animation: flowerSway ease-in-out infinite; z-index: 2; }
+        @keyframes flowerSway {
+            0%,100% { transform: rotate(-8deg) scale(1); }
+            50% { transform: rotate(8deg) scale(1.1); }
+        }
+
+        /* Nuit Étoilée */
+        .tpl-stars .theme-preview { background: radial-gradient(ellipse at top, #050520 0%, #010108 100%); }
+        .tpl-stars .theme-preview-name { color: #c0c8f8; }
+        .tpl-stars .theme-preview-name2 { color: #a0a8e8; }
+        .tpl-stars .theme-preview-hr { background: #2a2a6a; }
+        .tpl-stars .theme-preview-badge { color: #9090dd; border-color: rgba(96,96,204,0.3); background: rgba(96,96,204,0.1); }
+        .tpl-stars .theme-preview-date { color: #9090dd; }
+        .tpl-stars .theme-preview-rsvp { background: linear-gradient(135deg, #4040aa, #1a1a60); color: #fff; }
+        .star {
+            position: absolute; border-radius: 50%;
+            background: #fff; animation: starTwinkle ease-in-out infinite; z-index: 2;
+        }
+        @keyframes starTwinkle {
+            0%,100% { opacity: 0.1; transform: scale(0.7); }
+            50% { opacity: 1; transform: scale(1.4); }
+        }
+
+        /* Océan Mystique */
+        .tpl-ocean .theme-preview { background: linear-gradient(180deg, #010a1f 0%, #020d28 50%, #010a1f 100%); }
+        .tpl-ocean .theme-preview-name { color: #80c8f0; }
+        .tpl-ocean .theme-preview-name2 { color: #60a8d0; }
+        .tpl-ocean .theme-preview-hr { background: #1a5a8a; }
+        .tpl-ocean .theme-preview-badge { color: #7abedd; border-color: rgba(90,171,221,0.3); background: rgba(90,171,221,0.1); }
+        .tpl-ocean .theme-preview-date { color: #5aabdd; }
+        .tpl-ocean .theme-preview-rsvp { background: linear-gradient(135deg, #1a7aaa, #0a3a60); color: #fff; }
+        .wave-line {
+            position: absolute; width: 200%; height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(90,171,221,0.35), transparent);
+            animation: waveDrift linear infinite; z-index: 2; border-radius: 50%;
+        }
+        @keyframes waveDrift {
+            0% { transform: translateX(-50%) scaleY(1); }
+            50% { transform: translateX(-30%) scaleY(2.5); }
+            100% { transform: translateX(-10%) scaleY(1); }
+        }
+
+        /* Blanc Minimaliste */
+        .tpl-minimal .theme-preview { background: linear-gradient(160deg, #f8f8fc 0%, #ededf8 100%); }
+        .tpl-minimal .theme-preview-name { color: #333; }
+        .tpl-minimal .theme-preview-name2 { color: #555; }
+        .tpl-minimal .theme-preview-hr { background: #aaa; }
+        .tpl-minimal .theme-preview-badge { color: #555; border-color: rgba(0,0,0,0.1); background: rgba(0,0,0,0.04); }
+        .tpl-minimal .theme-preview-date { color: #888; }
+        .tpl-minimal .theme-preview-rsvp { background: #333; color: #fff; }
+
+        /* Coucher de Soleil */
+        .tpl-sunset .theme-preview { background: linear-gradient(180deg, #0a0515 0%, #3d1240 30%, #8b2252 60%, #d45a20 85%, #f0a040 100%); }
+        .tpl-sunset .theme-preview-name { color: #ffd8a8; }
+        .tpl-sunset .theme-preview-name2 { color: #f0b880; }
+        .tpl-sunset .theme-preview-hr { background: #8b2252; }
+        .tpl-sunset .theme-preview-badge { color: #ffd8a8; border-color: rgba(240,160,64,0.4); background: rgba(212,90,32,0.2); }
+        .tpl-sunset .theme-preview-date { color: #f0a040; }
+        .tpl-sunset .theme-preview-rsvp { background: linear-gradient(135deg, #d45a20, #8b2252); color: #fff; }
+
+        /* Vintage Rose */
+        .tpl-vintage .theme-preview { background: linear-gradient(160deg, #2a1518 0%, #3d1f22 100%); }
+        .tpl-vintage .theme-preview::before {
+            content: ''; position: absolute; inset: 0; z-index: 1;
+            background: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.02) 4px, rgba(255,255,255,0.02) 8px);
+        }
+        .tpl-vintage .theme-preview-name { color: #e8c0aa; }
+        .tpl-vintage .theme-preview-name2 { color: #d0a888; }
+        .tpl-vintage .theme-preview-hr { background: #c89878; }
+        .tpl-vintage .theme-preview-badge { color: #e8c0aa; border-color: rgba(200,152,120,0.3); background: rgba(200,152,120,0.15); }
+        .tpl-vintage .theme-preview-date { color: #c89878; }
+        .tpl-vintage .theme-preview-rsvp { background: linear-gradient(135deg, #8a4535, #5a2520); color: #fff; }
+
+        /* Renaissance */
+        .tpl-renaissance .theme-preview { background: linear-gradient(160deg, #0a0800 0%, #1a1400 100%); }
+        .tpl-renaissance .theme-preview::before {
+            content: ''; position: absolute; inset: 8px; z-index: 1;
+            border: 1px solid rgba(201,168,76,0.35); border-radius: 6px;
+        }
+        .tpl-renaissance .theme-preview-name { color: #e8c870; }
+        .tpl-renaissance .theme-preview-name2 { color: #c8a850; }
+        .tpl-renaissance .theme-preview-hr { background: #7a6a20; }
+        .tpl-renaissance .theme-preview-badge { color: #c9a84c; border-color: rgba(201,168,76,0.4); background: rgba(201,168,76,0.1); border-radius: 0; }
+        .tpl-renaissance .theme-preview-date { color: #c9a84c; }
+        .tpl-renaissance .theme-preview-rsvp { background: linear-gradient(135deg, #b89030, #7a6020); color: #fff; }
+
+        /* Aquarelle Rose */
+        .tpl-watercolor .theme-preview { background: linear-gradient(135deg, #f9f0f3 0%, #fce8ec 40%, #fff5e8 100%); }
+        .tpl-watercolor .theme-preview-name { color: #90304a; font-style: italic; }
+        .tpl-watercolor .theme-preview-name2 { color: #b05070; }
+        .tpl-watercolor .theme-preview-hr { background: #c05070; }
+        .tpl-watercolor .theme-preview-badge { color: #c05070; border-color: rgba(192,80,112,0.3); background: rgba(192,80,112,0.1); }
+        .tpl-watercolor .theme-preview-date { color: #c05070; }
+        .tpl-watercolor .theme-preview-rsvp { background: linear-gradient(135deg, #c05070, #802040); color: #fff; }
+        .watercolor-blob {
+            position: absolute; border-radius: 50%;
+            mix-blend-mode: multiply;
+            animation: blobPulse ease-in-out infinite; z-index: 1;
+        }
+        @keyframes blobPulse {
+            0%,100% { transform: scale(1) rotate(0deg); opacity: 0.5; }
+            50% { transform: scale(1.2) rotate(15deg); opacity: 0.8; }
+        }
+
+        /* Forêt Enchantée */
+        .tpl-forest .theme-preview { background: linear-gradient(160deg, #020a04 0%, #04150a 100%); }
+        .tpl-forest .theme-preview-name { color: #b0d8b0; }
+        .tpl-forest .theme-preview-name2 { color: #90b890; }
+        .tpl-forest .theme-preview-hr { background: #3a7a3a; }
+        .tpl-forest .theme-preview-badge { color: #7aaa7a; border-color: rgba(122,170,122,0.3); background: rgba(122,170,122,0.1); }
+        .tpl-forest .theme-preview-date { color: #7aaa7a; }
+        .tpl-forest .theme-preview-rsvp { background: linear-gradient(135deg, #3a8a3a, #1a4a1a); color: #fff; }
+        .leaf-particle {
+            position: absolute; font-size: 0.75rem;
+            animation: leafDrift linear infinite; z-index: 2;
+        }
+        @keyframes leafDrift {
+            0% { transform: translateY(-15px) rotate(0deg); opacity: 0.8; }
+            100% { transform: translateY(300px) rotate(-270deg); opacity: 0; }
+        }
+
+        /* Luxe Noir */
+        .tpl-luxe .theme-preview { background: radial-gradient(ellipse at top, #0a0a14, #000); }
+        .tpl-luxe .theme-preview-name { color: #fff; letter-spacing: 1px; }
+        .tpl-luxe .theme-preview-name2 { color: rgba(255,255,255,0.7); }
+        .tpl-luxe .theme-preview-hr { background: rgba(255,255,255,0.25); }
+        .tpl-luxe .theme-preview-badge { color: #fff; border-color: rgba(255,255,255,0.4); background: transparent; }
+        .tpl-luxe .theme-preview-date { color: rgba(255,255,255,0.6); }
+        .tpl-luxe .theme-preview-rsvp { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.3); color: #fff; }
+        .diamond-particle {
+            position: absolute; width: 5px; height: 5px;
+            background: rgba(255,255,255,0.6);
+            transform: rotate(45deg);
+            animation: diamondFloat ease-in-out infinite; z-index: 2;
+        }
+        @keyframes diamondFloat {
+            0%,100% { transform: rotate(45deg) translateY(0); opacity: 0.2; }
+            50% { transform: rotate(45deg) translateY(-10px); opacity: 0.9; }
+        }
+
+        /* ============ STICKY BOTTOM NAV  ============ */
+        #gallery-sticky-nav {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+            height: 70px;
+            background: rgba(8,8,16,0.92);
+            backdrop-filter: blur(24px);
+            border-top: 1px solid rgba(255,255,255,0.08);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px; gap: 16px;
+        }
+        #gallery-sticky-nav.hidden { display: none; }
+        .sticky-theme-info {
+            display: flex; align-items: center; gap: 10px;
+            min-width: 0; flex: 1;
+        }
+        .sticky-theme-dot {
+            width: 12px; height: 12px; border-radius: 50%;
+            background: var(--red); flex-shrink: 0;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%,100% { box-shadow: 0 0 0 0 rgba(220,53,69,0.5); }
+            50% { box-shadow: 0 0 0 6px rgba(220,53,69,0); }
+        }
+        .sticky-theme-name {
+            font-size: 0.82rem; font-weight: 600; color: #fff;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .sticky-theme-label {
+            font-size: 0.68rem; color: var(--text-muted);
+        }
+        .btn-sticky-next {
+            padding: 11px 24px;
+            border-radius: 30px;
+            background: linear-gradient(135deg, var(--red), #b91c2c);
+            color: #fff; font-weight: 700; font-size: 0.88rem;
+            border: none; cursor: pointer;
+            display: flex; align-items: center; gap: 8px;
+            font-family: 'Inter', sans-serif;
+            box-shadow: 0 0 24px rgba(220,53,69,0.45);
+            transition: all 0.25s;
+            white-space: nowrap; flex-shrink: 0;
+        }
+        .btn-sticky-next:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(220,53,69,0.55); }
+        .btn-sticky-next:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* Adjust studio-main to account for sticky nav on step 1 */
+        .studio-main { padding-bottom: 0; }
+
+        /* Color pickers row */
+        .color-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+        .color-swatch {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .color-swatch:hover, .color-swatch.selected { border-color: #fff; transform: scale(1.1); }
+
+        /* Font selector */
+        .font-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .font-option {
+            padding: 10px 12px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+        }
+        .font-option:hover { background: rgba(255,255,255,0.08); }
+        .font-option.selected { border-color: var(--red); background: rgba(220,53,69,0.1); }
+        .font-playfair { font-family: 'Playfair Display', serif; }
+        .font-inter { font-family: 'Inter', sans-serif; }
+
+        /* Toggle button */
+        .toggle-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        .toggle-label { font-size: 0.85rem; color: rgba(255,255,255,0.8); }
+        .toggle-sub { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+        .toggle {
+            width: 44px; height: 24px;
+            background: rgba(255,255,255,0.12);
+            border-radius: 12px;
+            cursor: pointer; position: relative;
+            transition: background 0.3s; flex-shrink: 0;
+            border: none;
+        }
+        .toggle.on { background: var(--red); }
+        .toggle::after {
+            content: '';
+            position: absolute; top: 3px; left: 3px;
+            width: 18px; height: 18px;
+            background: #fff; border-radius: 50%;
+            transition: transform 0.3s;
+        }
+        .toggle.on::after { transform: translateX(20px); }
+
+        /* Step navigation */
+        .step-nav {
+            display: flex; gap: 10px;
+            padding-top: 20px; margin-top: 10px;
+            border-top: 1px solid var(--glass-border);
+        }
+        .btn-prev, .btn-next {
+            flex: 1; padding: 12px;
+            border-radius: 10px; font-size: 0.9rem; font-weight: 600;
+            border: none; cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-prev { background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); color: var(--text); }
+        .btn-prev:hover { background: rgba(255,255,255,0.1); }
+        .btn-next {
+            background: linear-gradient(135deg, var(--red), #b91c2c);
+            color: #fff; box-shadow: 0 0 20px var(--red-glow);
+        }
+        .btn-next:hover { transform: translateY(-2px); box-shadow: 0 6px 30px var(--red-glow); }
+        .btn-next:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* ============ PREVIEW (RIGHT) ============ */
+        #preview-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .preview-label {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px; padding: 5px 14px;
+            font-size: 0.72rem; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .preview-label .dot { width: 6px; height: 6px; background: #22c55e; border-radius: 50%; animation: blink 1.5s ease-in-out infinite; }
+        @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+        /* Phone frame */
+        .phone-frame {
+            width: 320px;
+            height: 620px;
+            background: #111;
+            border-radius: 44px;
+            border: 6px solid #2a2a2a;
+            box-shadow: 
+                0 30px 80px rgba(0,0,0,0.8),
+                0 0 0 1px rgba(255,255,255,0.05),
+                inset 0 0 0 2px #1a1a1a;
+            overflow: hidden;
+            position: relative;
+            transition: all 0.5s ease;
+        }
+        .phone-notch {
+            position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+            width: 100px; height: 22px;
+            background: #111; border-radius: 0 0 14px 14px;
+            z-index: 10;
+        }
+        #phone-screen {
+            width: 100%; height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+        #phone-screen::-webkit-scrollbar { display: none; }
+
+        /* ============ INVITATION THEMES ============ */
+        .inv-screen {
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Romanesque */
+        .inv-romanesque { background: linear-gradient(170deg, #120505 0%, #1f0808 50%, #120505 100%); }
+        .inv-romanesque .inv-divider { border-color: #7a3535; }
+        .inv-romanesque .inv-deco { color: #7a3535; }
+        .inv-romanesque .inv-badge { background: rgba(122,53,53,0.2); border-color: rgba(122,53,53,0.4); color: #c48080; }
+
+        /* Gold */
+        .inv-gold { background: linear-gradient(170deg, #080800 0%, #130d00 50%, #080800 100%); }
+        .inv-gold .inv-divider { border-color: #7a6a20; }
+        .inv-gold .inv-deco { color: #c9a84c; }
+        .inv-gold .inv-badge { background: rgba(201,168,76,0.1); border-color: rgba(201,168,76,0.3); color: #c9a84c; }
+
+        /* Jardin */
+        .inv-jardin { background: linear-gradient(170deg, #020802 0%, #050f05 50%, #020802 100%); }
+        .inv-jardin .inv-divider { border-color: #3a7a3a; }
+        .inv-jardin .inv-deco { color: #5aaa5a; }
+        .inv-jardin .inv-badge { background: rgba(90,170,90,0.1); border-color: rgba(90,170,90,0.3); color: #7acc7a; }
+
+        /* Ocean */
+        .inv-ocean { background: linear-gradient(170deg, #010510 0%, #030d20 50%, #010510 100%); }
+        .inv-ocean .inv-divider { border-color: #1a5a8a; }
+        .inv-ocean .inv-deco { color: #5aabdd; }
+        .inv-ocean .inv-badge { background: rgba(90,171,221,0.1); border-color: rgba(90,171,221,0.3); color: #7abedd; }
+
+        /* Nuage */
+        .inv-nuage { background: linear-gradient(170deg, #f8f8fc 0%, #eeeefc 50%, #f8f8fc 100%); color: #1a1a2e !important; }
+        .inv-nuage .inv-names, .inv-nuage .inv-date, .inv-nuage .inv-event-name, .inv-nuage .inv-details-text, .inv-nuage .inv-message { color: #1a1a2e !important; }
+        .inv-nuage .inv-divider { border-color: #aaa; }
+        .inv-nuage .inv-deco { color: #888; }
+        .inv-nuage .inv-badge { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); color: #555; }
+
+        /* Nuit */
+        .inv-nuit { background: radial-gradient(ellipse at top, #0a0a25, #02020a); }
+        .inv-nuit .inv-divider { border-color: #2a2a6a; }
+        .inv-nuit .inv-deco { color: #6060cc; }
+        .inv-nuit .inv-badge { background: rgba(96,96,204,0.1); border-color: rgba(96,96,204,0.3); color: #9090dd; }
+
+        /* Sunset */
+        .inv-sunset { background: linear-gradient(180deg, #0a0515 0%, #3d1240 30%, #8b2252 60%, #d45a20 85%, #f0a040 100%); }
+        .inv-sunset .inv-divider { border-color: #8b2252; }
+        .inv-sunset .inv-deco { color: #f0a040; }
+        .inv-sunset .inv-badge { background: rgba(212,90,32,0.2); border-color: rgba(240,160,64,0.4); color: #ffd8a8; }
+
+        /* Vintage */
+        .inv-vintage { background: linear-gradient(160deg, #2a1518 0%, #3d1f22 100%); }
+        .inv-vintage::before {
+            content: ''; position: absolute; inset: 0; z-index: 0;
+            background: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.02) 4px, rgba(255,255,255,0.02) 8px);
+        }
+        .inv-vintage > * { position: relative; z-index: 1; }
+        .inv-vintage .inv-divider { border-color: #c89878; }
+        .inv-vintage .inv-deco { color: #e8c0aa; }
+        .inv-vintage .inv-badge { background: rgba(200,152,120,0.15); border-color: rgba(200,152,120,0.3); color: #e8c0aa; }
+
+        /* Renaissance */
+        .inv-renaissance { background: linear-gradient(160deg, #0a0800 0%, #1a1400 100%); }
+        .inv-renaissance::before {
+            content: ''; position: absolute; inset: 12px; z-index: 0;
+            border: 1px solid rgba(201,168,76,0.3); border-radius: 8px;
+        }
+        .inv-renaissance > * { position: relative; z-index: 1; }
+        .inv-renaissance .inv-divider { border-color: #7a6a20; }
+        .inv-renaissance .inv-deco { color: #e8c870; }
+        .inv-renaissance .inv-badge { background: rgba(201,168,76,0.1); border-color: rgba(201,168,76,0.4); color: #c9a84c; border-radius: 0; }
+
+        /* Watercolor */
+        .inv-watercolor { background: linear-gradient(135deg, #f9f0f3 0%, #fce8ec 40%, #fff5e8 100%); color: #4a2a35 !important; }
+        .inv-watercolor .inv-names, .inv-watercolor .inv-date, .inv-watercolor .inv-event-name, .inv-watercolor .inv-details-text, .inv-watercolor .inv-message { color: #4a2a35 !important; }
+        .inv-watercolor .inv-divider { border-color: #c05070; }
+        .inv-watercolor .inv-deco { color: #90304a; }
+        .inv-watercolor .inv-badge { background: rgba(192,80,112,0.1); border-color: rgba(192,80,112,0.3); color: #c05070; }
+
+        /* Forest */
+        .inv-forest { background: linear-gradient(160deg, #020a04 0%, #04150a 100%); }
+        .inv-forest .inv-divider { border-color: #3a7a3a; }
+        .inv-forest .inv-deco { color: #b0d8b0; }
+        .inv-forest .inv-badge { background: rgba(122,170,122,0.1); border-color: rgba(122,170,122,0.3); color: #7aaa7a; }
+
+        /* Luxe */
+        .inv-luxe { background: linear-gradient(160deg, #000 0%, #0a0a0a 100%); }
+        .inv-luxe .inv-divider { border-color: rgba(255,255,255,0.2); }
+        .inv-luxe .inv-deco { color: #fff; }
+        .inv-luxe .inv-badge { background: transparent; border-color: rgba(255,255,255,0.5); color: #fff; }
+
+        /* ---- Invitation Elements ---- */
+        .inv-deco-top {
+            font-size: 1.8rem; margin-bottom: 10px; opacity: 0.7;
+        }
+        .inv-badge {
+            border: 1px solid;
+            border-radius: 20px;
+            padding: 4px 14px;
+            font-size: 0.65rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+        .inv-event-name {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.6);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+        .inv-names {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            line-height: 1.2;
+            text-align: center;
+            margin-bottom: 4px;
+            color: #fff;
+        }
+        .inv-names .and {
+            font-style: italic;
+            font-size: 1.1rem;
+            display: block;
+            color: rgba(255,255,255,0.5);
+        }
+        .inv-divider {
+            width: 60px; border: none;
+            border-top: 1px solid;
+            margin: 16px auto;
+            position: relative;
+        }
+        .inv-divider::before {
+            content: '✦';
+            position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
+            font-size: 0.7rem;
+            background: inherit; /* Will be overridden */
+            padding: 0 4px;
+        }
+        .inv-date {
+            font-size: 1.1rem; font-weight: 300; letter-spacing: 3px;
+            text-align: center; color: rgba(255,255,255,0.85);
+            margin-bottom: 6px;
+        }
+        .inv-details-text {
+            font-size: 0.78rem; color: rgba(255,255,255,0.5);
+            text-align: center; letter-spacing: 1px; margin-bottom: 20px;
+        }
+        .inv-message {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 0.8rem;
+            line-height: 1.7;
+            color: rgba(255,255,255,0.7);
+            text-align: center;
+            margin-bottom: 20px;
+            font-style: italic;
+            width: 100%;
+        }
+        .inv-rsvp-btn {
+            display: block;
+            width: 100%;
+            padding: 13px;
+            border-radius: 50px;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            cursor: pointer;
+            border: none;
+            font-family: 'Playfair Display', serif;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+        .inv-qr-hint {
+            font-size: 0.65rem;
+            color: rgba(255,255,255,0.3);
+            text-align: center;
+            letter-spacing: 1px;
+        }
+        
+        /* Animated floating elements in preview */
+        @keyframes floatPetal {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0.7; }
+            100% { transform: translateY(-100px) rotate(180deg); opacity: 0; }
+        }
+
+        /* ============ SEND STEP ============ */
+        .send-options { display: grid; gap: 12px; }
+        .send-option {
+            display: flex; align-items: center; gap: 14px;
+            padding: 14px 16px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+        .send-option:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); transform: translateX(4px); }
+        .send-option-icon {
+            width: 44px; height: 44px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; flex-shrink: 0;
+        }
+        .send-option-text strong { display: block; font-size: 0.9rem; margin-bottom: 2px; }
+        .send-option-text span { font-size: 0.78rem; color: var(--text-muted); }
+
+        /* Success state */
+        .success-state {
+            text-align: center; padding: 20px;
+        }
+        .success-icon {
+            width: 70px; height: 70px;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            border-radius: 50%; margin: 0 auto 16px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2rem;
+            box-shadow: 0 0 30px rgba(34, 197, 94, 0.3);
+        }
+
+        /* ============ LINK DISPLAY ============ */
+        .link-box {
+            background: rgba(255,255,255,0.04);
+            border: 1px dashed rgba(255,255,255,0.2);
+            border-radius: 10px;
+            padding: 12px 14px;
+            font-size: 0.78rem;
+            color: var(--gold-light);
+            word-break: break-all;
+            margin-bottom: 10px;
+        }
+        .btn-copy {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: #fff; font-size: 0.82rem; font-weight: 600;
+            cursor: pointer; font-family: 'Inter', sans-serif;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            transition: all 0.2s; margin-bottom: 16px;
+        }
+        .btn-copy:hover { background: rgba(255,255,255,0.1); }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            #step-panel { width: 100%; min-width: unset; height: auto; position: static; }
+            #preview-panel { display: none; }
+            .studio-main { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Particles -->
+<div id="particles"></div>
+
+<!-- Top Bar -->
+<div id="studio-topbar">
+    <div class="topbar-brand">
+        <div class="icon">✉️</div>
+        <h1>Studio d'Invitation
+            <span>{{ event.name }}</span>
+        </h1>
+    </div>
+    <div class="topbar-actions">
+        <a href="{% url 'guests:home' %}" class="btn-topbar btn-ghost">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+        <button class="btn-topbar btn-red" id="global-save-btn" onclick="saveGlobal()">
+            <i class="bi bi-cloud-check-fill"></i> Sauvegarder
+        </button>
+    </div>
+</div>
+
+<!-- Main Layout -->
+<div class="studio-main">
+
+    <!-- Step Panel (Left) -->
+    <div id="step-panel">
+
+        <!-- Step Indicator -->
+        <div class="steps-indicator">
+            <div class="step-dot active" id="sdot-1" onclick="goToStep(1)">
+                <div class="step-dot-circle">1</div>
+                <div class="step-dot-label">Thème</div>
+            </div>
+            <div class="step-connector" id="scon-1"></div>
+            <div class="step-dot" id="sdot-2" onclick="goToStep(2)">
+                <div class="step-dot-circle">2</div>
+                <div class="step-dot-label">Contenu</div>
+            </div>
+            <div class="step-connector" id="scon-2"></div>
+            <div class="step-dot" id="sdot-3" onclick="goToStep(3)">
+                <div class="step-dot-circle">3</div>
+                <div class="step-dot-label">Style</div>
+            </div>
+            <div class="step-connector" id="scon-3"></div>
+            <div class="step-dot" id="sdot-4" onclick="goToStep(4)">
+                <div class="step-dot-circle">4</div>
+                <div class="step-dot-label">Envoyer</div>
+            </div>
+        </div>
+
+        <!-- STEP 1: Galerie de Thèmes — Style MyInvit -->
+        <div class="step-content active" id="step-1">
+            <div class="gallery-header">
+                <div class="gallery-title">Choisissez votre thème</div>
+                <div class="gallery-subtitle">12 designs animés exclusifs. Double-cliquez pour découvrir l'animation complète.</div>
+            </div>
+
+            <!-- Filter tabs -->
+            <div class="template-filter-tabs">
+                <div class="filter-tab active" onclick="filterTemplates(this,'all')">✦ Tous</div>
+                <div class="filter-tab" onclick="filterTemplates(this,'animated')">🎬 Animés</div>
+                <div class="filter-tab" onclick="filterTemplates(this,'floral')">🌸 Floral</div>
+                <div class="filter-tab" onclick="filterTemplates(this,'gold')">✨ Or & Luxe</div>
+                <div class="filter-tab" onclick="filterTemplates(this,'minimal')">☁️ Épuré</div>
+            </div>
+
+            <div class="themes-grid" id="templates-grid">
+
+                <!-- 1. Rose Éternelle -->
+                <div class="theme-item" data-cat="animated floral" style="animation-delay:0s">
+                    <div class="theme-item-label"><span class="lbl-emoji">🌹</span> Rose Éternelle</div>
+                    <div class="theme-card tpl-rose selected" data-theme="romanesque" onclick="selectThemeItem(this,'romanesque','🌹 Rose Éternelle')">
+                        <div class="theme-check">✓</div>
+                        <span class="theme-badge-tag tag-animated">Animé</span>
+                        <div class="theme-preview" id="prev-rose">
+                            <div class="theme-preview-deco">✦ ❦ ✦</div>
+                            <div class="theme-preview-badge">MARIAGE</div>
+                            <div class="theme-preview-content">
+                                <div class="theme-preview-name">Sarah</div>
+                                <span class="theme-preview-and">&amp;</span>
+                                <div class="theme-preview-name2">Emmanuel</div>
+                            </div>
+                            <hr class="theme-preview-hr">
+                            <div class="theme-preview-date">15 · JUIN · 2026</div>
+                            <button class="theme-preview-rsvp">✓ Confirmer</button>
+                        </div>
+                        <div class="theme-hover-overlay"><span class="hover-cta">✨ Choisir ce thème</span></div>
+                    </div>
+                </div>
+
+                <!-- 2. Or & Lumière -->
+                <div class="theme-item" data-cat="animated gold" style="animation-delay:0.05s">
+                    <div class="theme-item-label"><span class="lbl-emoji">✨</span> Or & Lumière</div>
+                    <div class="theme-card tpl-gold" data-theme="gold" onclick="selectThemeItem(this,'gold','✨ Or &amp; Lumière')">
+                        <div class="theme-check">✓</div>
+                        <span class="theme-badge-tag tag-gold">Or & Luxe</span>
+                        <div class="theme-preview" id="prev-gold">
+                            <div class="theme-preview-deco">✦ ❦ ✦</div>
+                            <div class="theme-preview-badge">CÉRÉMONIE</div>
+                            <div class="theme-preview-content">
+                                <div class="theme-preview-name">Camille</div>
+                                <span class="theme-preview-and">&amp;</span>
+                                <div class="theme-preview-name2">Alexandre</div>
+                            </div>
+                            <hr class="theme-preview-hr">
+                            <div class="theme-preview-date">22 · SEPT · 2026</div>
+                            <button class="theme-preview-rsvp">✓ Confirmer</button>
+                        </div>
+                        <div class="theme-hover-overlay"><span class="hover-cta">✨ Choisir ce thème</span></div>
+                    </div>
+                </div>
+
+                <!-- 3. Jardin Floral -->
+                <div class="theme-item" data-cat="animated floral" style="animation-delay:0.1s">
+                    <div class="theme-item-label"><span class="lbl-emoji">🌿</span> Jardin Floral</div>
+                    <div class="theme-card tpl-garden" data-theme="jardin" onclick="selectThemeItem(this,'jardin','🌿 Jardin Floral')">
+                        <div class="theme-check">✓</div>
+                        <span class="theme-badge-tag tag-floral">Floral</span>
+                        <div class="theme-preview" id="prev-garden">
+                            <div class="theme-preview-deco">🌸 ❧ 🌸</div>
+                            <div class="theme-preview-badge">MARIAGE</div>
+                            <div class="theme-preview-content">
+                                <div class="theme-preview-name">Léa</div>
+                                <span class="theme-preview-and">&amp;</span>
+                                <div class="theme-preview-name2">Gabriel</div>
+                            </div>
+                            <hr class="theme-preview-hr">
+                            <div class="theme-preview-date">10 · JUIL · 2026</div>
+                            <button class="theme-preview-rsvp">✓ Confirmer</button>
+                        </div>
+                        <div class="theme-hover-overlay"><span class="hover-cta">✨ Choisir ce thème</span></div>
+                    </div>
+                </div>
+
+                <!-- 4. Nuit Étoilée -->
+                <div class="theme-item" data-cat="animated" style="animation-delay:0.15s">
+                    <div class="theme-item-label"><span class="lbl-emoji">🌙</span> Nuit Étoilée</div>
+                    <div class="theme-card tpl-stars" data-theme="nuit" onclick="selectThemeItem(this,'nuit','🌙 Nuit Étoilée')">
+                        <div class="theme-check">✓</div>
+                        <span class="theme-badge-tag tag-animated">Animé</span>
+                        <div class="theme-preview" id="prev-stars">
+                            <div class="theme-preview-deco">✦ ★ ✦</div>
+                            <div class="theme-preview-badge">SOIRÉE</div>
+                            <div class="theme-preview-content">
+                                <div class="theme-preview-name">Marie</div>
+                                <span class="theme-preview-and">&amp;</span>
+                                <div class="theme-preview-name2">Lucas</div>
+                            </div>
+                            <hr class="theme-preview-hr">
+                            <div class="theme-preview-date">03 · OCT · 2026</div>
+                            <button class="theme-preview-rsvp">✓ Confirmer</button>
+                        </div>
+                        <div class="theme-hover-overlay"><span class="hover-cta">✨ Choisir ce thème</span></div>
+                    </div>
+                </div>
+
+                <!-- 5. Océan Mystique -->
+                <div class="theme-item" data-cat="animated" style="animation-delay:0.2s">
+                    <div class="theme-item-label"><span class="lbl-emoji">🌊</span> Océan Mystique</div>
+                    <div class="theme-card tpl-ocean" data-theme="ocean" onclick="selectThemeItem(this,'ocean','🌊 Océan Mystique')">
+                        <div class="theme-check">✓</div>
+                        <span class="theme-badge-tag tag-animated">Animé</span>
+                        <div class="theme-preview" id="prev-ocean">
+                            <div class="theme-preview-deco">〰 ∼ 〰</div>
+                            <div class="theme-preview-badge">CÉRÉMONIE</div>
+                            <div class="theme-preview-content">
+                                <div class="theme-preview-name">Sophia</div>
+                                <span class="theme-preview-and">&amp;</span>
+                                <div class="theme-preview-name2">Maxime</div>
+                            </div>
+                            <hr class="theme-preview-hr">
+                            <div class="theme-preview-date">18 · AOÛT · 2026</div>
+                            <button class="theme-preview-rsvp">✓ Confirmer</button>
+                        </div>
+                        <div class="theme-hover-overlay"><span class="hover-cta">✨ Choisir ce thème</span></div>
+                    </div>
+                </div>
+
+                <!-- 6. Blanc Épuré -->
+                <div class="theme-item" data-cat="minimal" style="animation-delay:0.25s">
+                    <div class="theme-item-label"><span class="lbl-emoji">☁️</span> Blanc Épuré</div>
+                    <div class="theme-card tpl-minimal" data-theme="nuage" onclick="selectThemeItem(this,'nuage','☁️ Blanc Épuré')">
+                        <div class="theme-check" style="background:#333;">✓</div>
+                        <span class="theme-badge-tag tag-minimal">Épuré</span>
+                        <div class="theme-preview">
+                            <div class="theme-preview-deco" style="color:#aaa;">— ◆ —</div>
+                            <div class="theme-preview-badge">MARIAGE</div>
+                            <div class="theme-preview-content">
+                                <div class="theme-preview-name">Juliette</div>
+                                <span class="theme-preview-and">&amp;</span>
+                                <div class="theme-preview-name2">Nicolas</div>
+                            </div>
+                            <hr class="theme-preview-hr">
+                            <div class="theme-preview-date">05 · MAI · 2026</div>
+                            <button class="theme-preview-rsvp">✓ Confirmer</button>
+                        </div>
+                        <div class="theme-hover-overlay"><span class="hover-cta">✨ Choisir ce thème</span></div>
+                    </div>
+                </div>
+
+                <!-- 7. Coucher de Soleil -->
+                <div class="theme-item" data-cat="animated" style="animation-delay:0.3s">
+                    <div class="theme-item-label"><span class="lbl-emoji">🌅</span> Coucher de Soleil</div>
+                    <div class="theme-card tpl-sunset" data-theme="sunset" onclick="selectThemeItem(this,'sunset','🌅 Coucher de Soleil')">
+                        <div class="theme-check">✓</div>
+                        <span class="theme-badge-tag tag-animated">Animé</span>
+                        <div class="theme-preview">
+                            <div class="theme-preview-deco">🌅 ✦ 🌅</div>
+                            <div class="theme-preview-badge">FÊTE</div>
+                            <div class="theme-preview-content">
+                                <div class="theme-preview-name">Inès</div>
+                                <span class="theme-preview-and">&amp;</span>
+                                <div class="theme-preview-name2">Thomas</div>
+                            </div>
+                            <hr class="theme-preview-hr">
+                            <div class="theme-preview-date">12 · JUIN · 2026</div>
+                            <button class="theme-preview-rsvp">✓ Confirmer</button>
+                        </div>
+                        <div class="theme-hover-overlay"><span class="hover-cta">✨ Choisir ce thème</span></div>
+                    </div>
+                </div>
+
+                <!-- 8. Vintage Rose -->
+                <div class="theme-item" data-cat="minimal floral" style="animation-delay:0.35s">
+                    <div class="theme-item-label"><span class="lbl-emoji">🕊️</span> Vintage Rose</div>
+                    <div class="theme-card tpl-vintage" data-theme="vintage" onclick="selectThemeItem(this,'vintage','🕊️ Vintage Rose')">
+                        <div class="theme-check">✓</div>
+                        <span class="theme-badge-tag tag-floral">Vintage</span>
+                        <div class="theme-preview">
+                            <div class="theme-preview-deco">🕊️ ❦ 🕊️</div>
+                            <div class="theme-preview-badge">MARIAGE</div>
+                            <div class="theme-preview-content">
+                                <div class="theme-preview-name">Élise</div>
+                                <span class="theme-preview-and">&amp;</span>
+                                <div class="theme-preview-name2">Antoine</div>
+                            </div>
+                            <hr class="theme-preview-hr">
+                            <div class="theme-preview-date">30 · AVR · 2026</div>
+                            <button class="theme-preview-rsvp">✓ Confirmer</button>
+                        </div>
+                        <div class="theme-hover-overlay"><span class="hover-cta">✨ Choisir ce thème</span></div>
+                    </div>
+                </div>
+
+                <!-- 9. Renaissance -->
+                <div class="theme-item" data-cat="gold minimal" style="animation-delay:0.4s">
+                    <div class="theme-item-label"><span class="lbl-emoji">👑</span> Renaissance</div>
+                    <div class="theme-card tpl-renaissance" data-theme="renaissance" onclick="selectThemeItem(this,'renaissance','👑 Renaissance')">
+                        <div class="theme-check">✓</div>
+                        <span class="theme-badge-tag tag-gold">Or</span>
+                        <div class="theme-preview">
+                            <div class="theme-preview-deco">👑 ✦ 👑</div>
+                            <div class="theme-preview-badge">GALA</div>
+                            <div class="theme-preview-content">
+                                <div class="theme-preview-name">Victoire</div>
+                                <span class="theme-preview-and">&amp;</span>
+                                <div class="theme-preview-name2">Raphaël</div>
+                            </div>
+                            <hr class="theme-preview-hr">
+                            <div class="theme-preview-date">14 · NOV · 2026</div>
+                            <button class="theme-preview-rsvp">✓ Confirmer</button>
+                        </div>
+                        <div class="theme-hover-overlay"><span class="hover-cta">✨ Choisir ce thème</span></div>
+                    </div>
+                </div>
+
+                <!-- 10. Aquarelle Rose -->
+                <div class="theme-item" data-cat="animated floral" style="animation-delay:0.45s">
+                    <div class="theme-item-label"><span class="lbl-emoji">🎨</span> Aquarelle Rose</div>
+                    <div class="theme-card tpl-watercolor" data-theme="watercolor" onclick="selectThemeItem(this,'watercolor','🎨 Aquarelle Rose')">
+                        <div class="theme-check" style="background:#c05070;">✓</div>
+                        <span class="theme-badge-tag tag-floral">Aquarelle</span>
+                        <div class="theme-preview" id="prev-water">
+                            <div class="theme-preview-deco">🎨 ❦ 🌹</div>
+                            <div class="theme-preview-badge">MARIAGE</div>
+                            <div class="theme-preview-content">
+                                <div class="theme-preview-name">Manon</div>
+                                <span class="theme-preview-and">&amp;</span>
+                                <div class="theme-preview-name2">Florian</div>
+                            </div>
+                            <hr class="theme-preview-hr">
+                            <div class="theme-preview-date">27 · MARS · 2026</div>
+                            <button class="theme-preview-rsvp">✓ Confirmer</button>
+                        </div>
+                        <div class="theme-hover-overlay"><span class="hover-cta">✨ Choisir ce thème</span></div>
+                    </div>
+                </div>
+
+                <!-- 11. Forêt Enchantée -->
+                <div class="theme-item" data-cat="animated floral" style="animation-delay:0.5s">
+                    <div class="theme-item-label"><span class="lbl-emoji">🌲</span> Forêt Enchantée</div>
+                    <div class="theme-card tpl-forest" data-theme="forest" onclick="selectThemeItem(this,'forest','🌲 Forêt Enchantée')">
+                        <div class="theme-check">✓</div>
+                        <span class="theme-badge-tag tag-floral">Forêt</span>
+                        <div class="theme-preview" id="prev-forest">
+                            <div class="theme-preview-deco">🌲 ❧ 🌿</div>
+                            <div class="theme-preview-badge">MARIAGE</div>
+                            <div class="theme-preview-content">
+                                <div class="theme-preview-name">Noémie</div>
+                                <span class="theme-preview-and">&amp;</span>
+                                <div class="theme-preview-name2">Hugo</div>
+                            </div>
+                            <hr class="theme-preview-hr">
+                            <div class="theme-preview-date">20 · SEPT · 2026</div>
+                            <button class="theme-preview-rsvp">✓ Confirmer</button>
+                        </div>
+                        <div class="theme-hover-overlay"><span class="hover-cta">✨ Choisir ce thème</span></div>
+                    </div>
+                </div>
+
+                <!-- 12. Luxe Noir Diamant -->
+                <div class="theme-item" data-cat="animated minimal" style="animation-delay:0.55s">
+                    <div class="theme-item-label"><span class="lbl-emoji">💎</span> Luxe Noir</div>
+                    <div class="theme-card tpl-luxe" data-theme="luxe" onclick="selectThemeItem(this,'luxe','💎 Luxe Noir Diamant')">
+                        <div class="theme-check">✓</div>
+                        <span class="theme-badge-tag tag-dark">💎 Luxe</span>
+                        <div class="theme-preview" id="prev-luxe">
+                            <div class="theme-preview-deco" style="color:rgba(255,255,255,0.5);">◆ ◈ ◆</div>
+                            <div class="theme-preview-badge">COCKTAIL</div>
+                            <div class="theme-preview-content">
+                                <div class="theme-preview-name" style="letter-spacing:1.5px;">Aurore</div>
+                                <span class="theme-preview-and">&amp;</span>
+                                <div class="theme-preview-name2" style="letter-spacing:1px;">Édouard</div>
+                            </div>
+                            <hr class="theme-preview-hr">
+                            <div class="theme-preview-date">01 · DÉC · 2026</div>
+                            <button class="theme-preview-rsvp">✓ Confirmer</button>
+                        </div>
+                        <div class="theme-hover-overlay"><span class="hover-cta">✨ Choisir ce thème</span></div>
+                    </div>
+                </div>
+
+            </div>
+            <!-- Navigation handled by the sticky bottom bar -->
+        </div>
+
+        <!-- STEP 2: Contenu -->
+        <div class="step-content" id="step-2">
+            <div class="step-title">✍️ Les informations clefs</div>
+            <div class="step-subtitle">Remplissez simplement. Tout s'affiche en temps réel dans l'aperçu.</div>
+
+            <div class="form-group">
+                <label class="form-label">Nom de l'événement (ex: Mariage, Anniversaire...)</label>
+                <input type="text" class="form-input" id="f-event-name" placeholder="Notre Mariage" value="{{ event.name }}" oninput="updatePreview()">
+            </div>
+
+            <div class="form-input-row">
+                <div class="form-group">
+                    <label class="form-label">Prénom & Nom de la Mariée</label>
+                    <input type="text" class="form-input" id="f-name1" placeholder="Sarah" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Prénom & Nom du Marié</label>
+                    <input type="text" class="form-input" id="f-name2" placeholder="Emmanuel" oninput="updatePreview()">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Date de l'événement</label>
+                <input type="text" class="form-input" id="f-date" placeholder="Samedi, 15 Juin 2026" oninput="updatePreview()">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Lieu & Heure</label>
+                <input type="text" class="form-input" id="f-venue" placeholder="Château de la Lumière · 19h30" oninput="updatePreview()">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Message personnalisé (optionnel)</label>
+                <textarea class="form-textarea" id="f-message" placeholder="Nous serions honorés de vous compter parmi nous pour célébrer ce moment si précieux..." oninput="updatePreview()"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" style="display:flex;align-items:center;gap:6px;">
+                    <i class="bi bi-image"></i> Photo "Save the Date" (Optionnelle)
+                </label>
+                <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-bottom:8px;">Ajoutez une jolie photo de vous au format carré ou paysage.</div>
+                <input type="file" class="form-input" id="f-photo" accept="image/*" onchange="handlePhotoUpload(this)" style="padding: 8px;">
+                <div id="photo-preview-container" style="display:none; margin-top:10px; position:relative;">
+                    <img id="photo-thumbnail" src="" style="width:100%; height:120px; object-fit:cover; border-radius:8px; border:1px solid rgba(255,255,255,0.2);">
+                    <button onclick="removePhoto()" style="position:absolute; top:6px; right:6px; background:rgba(0,0,0,0.6); color:#fff; border:none; width:24px; height:24px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;">&times;</button>
+                </div>
+            </div>
+
+            <div class="step-nav">
+                <button class="btn-prev" onclick="goToStep(1)"><i class="bi bi-arrow-left"></i> Retour</button>
+                <button class="btn-next" onclick="goToStep(3)">Suivant <i class="bi bi-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <!-- STEP 3: Style -->
+        <div class="step-content" id="step-3">
+            <div class="step-title">💎 Personnalisez le style</div>
+            <div class="step-subtitle">Affinez les détails qui rendent votre invitation unique.</div>
+
+            <div class="form-group">
+                <label class="form-label">Couleur d'accentuation</label>
+                <div class="color-row">
+                    <div class="color-swatch selected" style="background:#dc3545;" data-color="#dc3545" onclick="selectColor(this)"></div>
+                    <div class="color-swatch" style="background:#c9a84c;" data-color="#c9a84c" onclick="selectColor(this)"></div>
+                    <div class="color-swatch" style="background:#7ec87e;" data-color="#7ec87e" onclick="selectColor(this)"></div>
+                    <div class="color-swatch" style="background:#7ab8e8;" data-color="#7ab8e8" onclick="selectColor(this)"></div>
+                    <div class="color-swatch" style="background:#e8a8d8;" data-color="#e8a8d8" onclick="selectColor(this)"></div>
+                    <div class="color-swatch" style="background:#c0c0ff;" data-color="#c0c0ff" onclick="selectColor(this)"></div>
+                    <div class="color-swatch" style="background:#ffffff;" data-color="#ffffff" onclick="selectColor(this)"></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Police de caractère</label>
+                <div class="font-options">
+                    <div class="font-option font-playfair selected" data-font="Playfair Display" onclick="selectFont(this)">Playfair Display<br><small style="opacity:0.5; font-size:0.7em">Élégant & Classique</small></div>
+                    <div class="font-option font-inter" data-font="Inter" onclick="selectFont(this)">Inter<br><small style="opacity:0.5; font-size:0.7em">Moderne & Épuré</small></div>
+                    <div class="font-option" data-font="Georgia" onclick="selectFont(this)" style="font-family:Georgia">Georgia<br><small style="opacity:0.5; font-size:0.7em">Tradition & Prestige</small></div>
+                    <div class="font-option" data-font="Courier New" onclick="selectFont(this)" style="font-family:monospace">Courier<br><small style="opacity:0.5; font-size:0.7em">Vintage & Unique</small></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" style="margin-bottom:12px;">Options de l'invitation</label>
+                <div class="toggle-row">
+                    <div>
+                        <div class="toggle-label">🎬 Animation d'enveloppe</div>
+                        <div class="toggle-sub">L'invité "ouvre" son invitation</div>
+                    </div>
+                    <button class="toggle on" id="tog-envelope" onclick="toggleOption(this, 'envelope')"></button>
+                </div>
+                <div class="toggle-row">
+                    <div>
+                        <div class="toggle-label">✅ Bouton RSVP</div>
+                        <div class="toggle-sub">Les invités peuvent confirmer en 1 clic</div>
+                    </div>
+                    <button class="toggle on" id="tog-rsvp" onclick="toggleOption(this, 'rsvp')"></button>
+                </div>
+                <div class="toggle-row">
+                    <div>
+                        <div class="toggle-label">📍 Afficher le plan</div>
+                        <div class="toggle-sub">Lien vers Google Maps</div>
+                    </div>
+                    <button class="toggle" id="tog-map" onclick="toggleOption(this, 'map')"></button>
+                </div>
+                <div class="toggle-row">
+                    <div>
+                        <div class="toggle-label">🎵 Musique de fond</div>
+                        <div class="toggle-sub">URL d'un son (MP3 en ligne)</div>
+                    </div>
+                    <button class="toggle" id="tog-music" onclick="toggleOption(this, 'music')"></button>
+                </div>
+            </div>
+            
+            <div id="music-url-field" style="display:none;" class="form-group">
+                <label class="form-label">URL de la musique (MP3)</label>
+                <input type="url" class="form-input" id="f-music-url" placeholder="https://..." oninput="updatePreview()">
+            </div>
+
+            <div class="step-nav">
+                <button class="btn-prev" onclick="goToStep(2)"><i class="bi bi-arrow-left"></i> Retour</button>
+                <button class="btn-next" onclick="goToStep(4)">Aperçu final <i class="bi bi-check2"></i></button>
+            </div>
+        </div>
+
+        <!-- STEP 4: Envoyer -->
+        <div class="step-content" id="step-4">
+            <div class="step-title">🚀 Votre invitation est prête !</div>
+            <div class="step-subtitle">Chaque invité a son lien magique unique et personnalisé. Cliquez sur un lien pour le tester !</div>
+
+            <div style="background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); border-radius: 12px; padding: 12px 14px; margin-bottom: 18px; display:flex; gap:12px; align-items:center;">
+                <span style="font-size:1.4rem;">✅</span>
+                <div>
+                    <strong style="display:block; font-size:0.88rem; margin-bottom:2px;">Design sauvegardé — {{ invites_count }} invité(s) trouvé(s)</strong>
+                    <span style="font-size:0.76rem; color:rgba(255,255,255,0.55);">Chaque invité verra son prénom et nom injectés automatiquement.</span>
+                </div>
+            </div>
+
+            {% if invites %}
+            <!-- Invite List with real links -->
+            <div style="margin-bottom:16px;">
+                <label class="form-label">🔗 Liens personnalisés par invité</label>
+                <div style="max-height: 280px; overflow-y: auto; border:1px solid rgba(255,255,255,0.08); border-radius:10px;">
+                    {% for invite in invites %}
+                    <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <!-- Avatar -->
+                        <div style="width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg, rgba(220,53,69,0.6), rgba(140,20,30,0.6)); display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700; flex-shrink:0;">
+                            {{ invite.prenom|slice:":1"|upper }}{{ invite.nom|slice:":1"|upper }}
+                        </div>
+                        <!-- Name & link -->
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-size:0.82rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ invite.prenom }} {{ invite.nom }}</div>
+                            <div style="font-size:0.68rem; color:rgba(255,255,255,0.4); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">/guests/i/{{ invite.code }}/</div>
+                        </div>
+                        <!-- Actions -->
+                        <div style="display:flex; gap:6px; flex-shrink:0;">
+                            <a href="{% url 'guests:guest_invitation' invite.code %}" target="_blank"
+                               style="display:inline-flex; align-items:center; gap:4px; padding:5px 10px; background:rgba(220,53,69,0.2); border:1px solid rgba(220,53,69,0.4); border-radius:6px; color:#fff; text-decoration:none; font-size:0.72rem; font-weight:600; transition:all 0.2s;"
+                               title="Voir l'invitation">
+                                <i class="bi bi-eye"></i> Voir
+                            </a>
+                            <button onclick="copyInviteLink('{{ request.scheme }}://{{ request.get_host }}{% url "guests:guest_invitation" invite.code %}')"
+                                    style="display:inline-flex; align-items:center; gap:4px; padding:5px 10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:6px; color:rgba(255,255,255,0.7); font-size:0.72rem; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; transition:all 0.2s;"
+                                    title="Copier le lien">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <!-- No guests yet -->
+            <div style="background:rgba(255,180,0,0.08); border:1px solid rgba(255,180,0,0.2); border-radius:10px; padding:14px; margin-bottom:16px; display:flex; gap:10px; align-items:flex-start;">
+                <span style="font-size:1.3rem;">⚠️</span>
+                <div>
+                    <strong style="display:block; font-size:0.85rem; margin-bottom:4px;">Aucun invité trouvé pour cet événement</strong>
+                    <span style="font-size:0.78rem; color:rgba(255,255,255,0.55);">Ajoutez d'abord vos invités dans la liste pour générer leurs liens personnalisés.</span>
+                    <a href="{% url 'guests:add_invite' %}?event={{ event.id }}" style="display:inline-block; margin-top:8px; padding:6px 12px; background:rgba(220,53,69,0.3); border:1px solid rgba(220,53,69,0.5); border-radius:6px; color:#fff; text-decoration:none; font-size:0.78rem; font-weight:600;">
+                        + Ajouter des invités
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Send methods -->
+            <div class="form-group">
+                <label class="form-label" style="margin-bottom:10px;">Méthode d'envoi en masse</label>
+                <div class="send-options">
+                    <a class="send-option" href="{% url 'guests:envoyer_invitations' %}?event={{ event.id }}">
+                        <div class="send-option-icon" style="background:rgba(220,53,69,0.15);">📧</div>
+                        <div class="send-option-text">
+                            <strong>Envoyer par Email</strong>
+                            <span>Mail HTML avec bouton "Ouvrir l'invitation"</span>
+                        </div>
+                        <i class="bi bi-chevron-right" style="margin-left:auto; color:rgba(255,255,255,0.3);"></i>
+                    </a>
+                    <div class="send-option" onclick="alert('La fonctionnalité WhatsApp en masse est disponible dans la page Invitations.')">
+                        <div class="send-option-icon" style="background:rgba(37,211,102,0.15);">💬</div>
+                        <div class="send-option-text">
+                            <strong>WhatsApp en masse</strong>
+                            <span>Un lien par invité, envoi automatique</span>
+                        </div>
+                        <i class="bi bi-chevron-right" style="margin-left:auto; color:rgba(255,255,255,0.3);"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-nav">
+                <button class="btn-prev" onclick="goToStep(3)"><i class="bi bi-arrow-left"></i> Modifier</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Preview Panel (Right) -->
+    <div id="preview-panel">
+        <div class="preview-label"><span class="dot"></span> Aperçu en direct</div>
+        
+        <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div id="phone-screen">
+                <div class="inv-screen inv-romanesque" id="inv-screen">
+                    <!-- Dynamic Decorations -->
+                    <div class="inv-deco-top inv-deco">✦ ❦ ✦</div>
+                    <div class="inv-badge inv-deco" id="inv-badge">MARIAGE</div>
+                    
+                    <!-- Photo Save the Date -->
+                    <img id="inv-photo" src="" style="display:none; width:130px; height:130px; border-radius:50%; object-fit:cover; border:3px solid rgba(255,255,255,0.2); margin-bottom:15px; box-shadow:0 10px 30px rgba(0,0,0,0.4);">
+                    
+                    <div class="inv-event-name" id="inv-event-name">Notre Mariage</div>
+                    <div class="inv-names" id="inv-names">
+                        Sarah
+                        <span class="and">&amp;</span>
+                        Emmanuel
+                    </div>
+                    <hr class="inv-divider inv-deco">
+                    <div class="inv-date" id="inv-date">Samedi, 15 Juin 2026</div>
+                    <div class="inv-details-text" id="inv-venue">Château de la Lumière · 19h30</div>
+                    <div class="inv-message" id="inv-message">
+                        "Nous serions honorés de vous compter parmi nous pour célébrer ce moment si précieux..."
+                    </div>
+                    <button class="inv-rsvp-btn" id="inv-rsvp-btn" style="background: linear-gradient(135deg, #dc3545, #8b111c); color: #fff; box-shadow: 0 4px 20px rgba(220,53,69,0.4);">
+                        ✓ Confirmer ma présence
+                    </button>
+                    <div class="inv-qr-hint">QR Code VIP · Prénom Invité</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Sticky Bottom Nav (Step 1 only) -->
+<div id="gallery-sticky-nav">
+    <div class="sticky-theme-info">
+        <div class="sticky-theme-dot"></div>
+        <div>
+            <div class="sticky-theme-name" id="sticky-theme-name">🌹 Rose Éternelle</div>
+            <div class="sticky-theme-label">Thème sélectionné</div>
+        </div>
+    </div>
+    <button class="btn-sticky-next" id="sticky-next-btn" onclick="goToStep(2)">
+        Continuer &nbsp;<i class="bi bi-arrow-right"></i>
+    </button>
+</div>
+
+<script>
+    // ============ STATE ============
+    const state = {
+        theme: 'romanesque',
+        accentColor: '#dc3545',
+        font: 'Playfair Display',
+        envelope: true,
+        rsvp: true,
+        map: false,
+        music: false,
+        currentStep: 1,
+        photoB64: null
+    };
+
+    // ============ PHOTO UPLOAD ============
+    function handlePhotoUpload(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const MAX_SIZE = 800; // compress image
+                let width = img.width;
+                let height = img.height;
+                if (width > height) {
+                    if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+                } else {
+                    if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+                state.photoB64 = dataUrl;
+                document.getElementById('photo-thumbnail').src = dataUrl;
+                document.getElementById('photo-preview-container').style.display = 'block';
+                updatePreview();
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function removePhoto() {
+        state.photoB64 = null;
+        document.getElementById('f-photo').value = '';
+        document.getElementById('photo-preview-container').style.display = 'none';
+        updatePreview();
+    }
+
+    const EVENT_ID = "{{ event.id }}";
+    const SAVE_URL = "{% url 'guests:save_template' event.id %}";
+    const CSRF = "{{ csrf_token }}";
+    const HOST = "{{ request.scheme }}://{{ request.get_host }}";
+
+    // ============ PARTICLES ============
+    function createParticles() {
+        const container = document.getElementById('particles');
+        const colors = ['#dc354533', '#c9a84c22', '#ffffff11'];
+        for (let i = 0; i < 25; i++) {
+            const el = document.createElement('div');
+            el.className = 'particle';
+            const size = Math.random() * 4 + 1;
+            el.style.cssText = `
+                width: ${size}px; height: ${size}px;
+                background: ${colors[Math.floor(Math.random()*colors.length)]};
+                left: ${Math.random() * 100}%;
+                animation-duration: ${8 + Math.random() * 15}s;
+                animation-delay: ${Math.random() * 10}s;
+            `;
+            container.appendChild(el);
+        }
+    }
+    createParticles();
+
+    // ============ TEMPLATE CARD ANIMATIONS ============
+    function initTemplateAnimations() {
+        // 1. Rose Éternelle — Pétales qui tombent
+        const roseEl = document.getElementById('prev-rose');
+        if (roseEl) {
+            for (let i = 0; i < 8; i++) {
+                const el = document.createElement('div');
+                el.className = 'petal';
+                el.style.cssText = `
+                    left: ${10 + Math.random() * 80}%;
+                    top: ${Math.random() * 30}%;
+                    width: ${5 + Math.random() * 6}px;
+                    height: ${8 + Math.random() * 8}px;
+                    animation-duration: ${2 + Math.random() * 3}s;
+                    animation-delay: ${Math.random() * 3}s;
+                    background: rgba(${220 + Math.floor(Math.random()*20)},${60 + Math.floor(Math.random()*40)},${90 + Math.floor(Math.random()*30)},0.5);
+                    border-radius: ${Math.random() > 0.5 ? '50% 20% 50% 20%' : '30% 70% 70% 30%'};
+                `;
+                roseEl.appendChild(el);
+            }
+        }
+
+        // 2. Or & Lumière — Particules dorées flottantes
+        const goldEl = document.getElementById('prev-gold');
+        if (goldEl) {
+            for (let i = 0; i < 10; i++) {
+                const el = document.createElement('div');
+                el.className = 'gold-particle';
+                const size = 3 + Math.random() * 6;
+                el.style.cssText = `
+                    left: ${5 + Math.random() * 90}%;
+                    top: ${10 + Math.random() * 80}%;
+                    width: ${size}px; height: ${size}px;
+                    animation-duration: ${1.5 + Math.random() * 2.5}s;
+                    animation-delay: ${Math.random() * 2}s;
+                `;
+                goldEl.appendChild(el);
+            }
+        }
+
+        // 3. Jardin Floral — Fleurs qui se balancent
+        const gardenEl = document.getElementById('prev-garden');
+        if (gardenEl) {
+            const flowers = ['🌸', '🌺', '🌹', '🌼', '💐'];
+            for (let i = 0; i < 5; i++) {
+                const el = document.createElement('div');
+                el.className = 'flower';
+                el.textContent = flowers[i % flowers.length];
+                el.style.cssText = `
+                    left: ${i * 18 + 5}%;
+                    bottom: ${5 + Math.random() * 20}%;
+                    font-size: ${0.7 + Math.random() * 0.5}rem;
+                    animation-duration: ${2 + Math.random() * 2}s;
+                    animation-delay: ${i * 0.3}s;
+                    opacity: 0.5;
+                `;
+                gardenEl.appendChild(el);
+            }
+        }
+
+        // 4. Nuit Étoilée — Étoiles qui clignotent
+        const starsEl = document.getElementById('prev-stars');
+        if (starsEl) {
+            for (let i = 0; i < 20; i++) {
+                const el = document.createElement('div');
+                el.className = 'star';
+                const size = 1 + Math.random() * 2.5;
+                el.style.cssText = `
+                    left: ${Math.random() * 100}%;
+                    top: ${Math.random() * 100}%;
+                    width: ${size}px; height: ${size}px;
+                    animation-duration: ${0.8 + Math.random() * 2}s;
+                    animation-delay: ${Math.random() * 2}s;
+                `;
+                starsEl.appendChild(el);
+            }
+        }
+
+        // 5. Océan — Vagues
+        const oceanEl = document.getElementById('prev-ocean');
+        if (oceanEl) {
+            for (let i = 0; i < 4; i++) {
+                const el = document.createElement('div');
+                el.className = 'wave-line';
+                el.style.cssText = `
+                    bottom: ${10 + i * 20}%;
+                    animation-duration: ${3 + i * 0.7}s;
+                    animation-delay: ${i * 0.5}s;
+                    opacity: ${0.3 + i * 0.15};
+                `;
+                oceanEl.appendChild(el);
+            }
+        }
+
+        // 10. Aquarelle — Blobs
+        const waterEl = document.getElementById('prev-water');
+        if (waterEl) {
+            const colors = ['rgba(255,150,180,0.4)', 'rgba(255,200,140,0.35)', 'rgba(180,100,200,0.3)'];
+            for (let i = 0; i < 3; i++) {
+                const el = document.createElement('div');
+                el.className = 'watercolor-blob';
+                const size = 40 + Math.random() * 40;
+                el.style.cssText = `
+                    left: ${10 + i * 25}%;
+                    top: ${10 + Math.random() * 60}%;
+                    width: ${size}px; height: ${size * 0.85}px;
+                    background: ${colors[i]};
+                    animation-duration: ${2 + Math.random() * 2}s;
+                    animation-delay: ${i * 0.7}s;
+                `;
+                waterEl.appendChild(el);
+            }
+        }
+
+        // 11. Forêt — Feuilles
+        const forestEl = document.getElementById('prev-forest');
+        if (forestEl) {
+            const leaves = ['🍃', '🍀', '🌿'];
+            for (let i = 0; i < 6; i++) {
+                const el = document.createElement('div');
+                el.className = 'leaf-particle';
+                el.textContent = leaves[i % leaves.length];
+                el.style.cssText = `
+                    left: ${10 + Math.random() * 80}%;
+                    top: ${Math.random() * 20}%;
+                    animation-duration: ${3 + Math.random() * 4}s;
+                    animation-delay: ${Math.random() * 4}s;
+                    opacity: 0.6;
+                    font-size: ${0.7 + Math.random() * 0.4}rem;
+                `;
+                forestEl.appendChild(el);
+            }
+        }
+
+        // 12. Luxe Noir — Diamants flottants
+        const luxeEl = document.getElementById('prev-luxe');
+        if (luxeEl) {
+            for (let i = 0; i < 8; i++) {
+                const el = document.createElement('div');
+                el.className = 'diamond-particle';
+                const size = 3 + Math.random() * 5;
+                el.style.cssText = `
+                    left: ${5 + Math.random() * 90}%;
+                    top: ${5 + Math.random() * 90}%;
+                    width: ${size}px; height: ${size}px;
+                    animation-duration: ${1 + Math.random() * 2.5}s;
+                    animation-delay: ${Math.random() * 2}s;
+                    background: rgba(${180 + Math.floor(Math.random()*75)},${180 + Math.floor(Math.random()*75)},${255},0.7);
+                `;
+                luxeEl.appendChild(el);
+            }
+        }
+    }
+
+    // ============ FILTER TEMPLATES ============
+    function filterTemplates(tabEl, category) {
+        document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+        tabEl.classList.add('active');
+
+        // Filter .theme-item wrappers (new structure)
+        document.querySelectorAll('#templates-grid .theme-item').forEach((item, idx) => {
+            const cats = item.dataset.cat || '';
+            if (category === 'all' || cats.includes(category)) {
+                item.style.display = '';
+                item.style.animationDelay = (idx * 0.04) + 's';
+                item.style.animation = 'none';
+                requestAnimationFrame(() => { item.style.animation = 'cardAppear 0.35s ease both'; });
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    // Card appear animation
+    const cardStyle = document.createElement('style');
+    cardStyle.textContent = '@keyframes cardAppear{from{opacity:0;transform:scale(0.9)}to{opacity:1;transform:scale(1)}}';
+    document.head.appendChild(cardStyle);
+
+    // Run animations on load
+    initTemplateAnimations();
+
+
+    function goToStep(n) {
+        document.querySelectorAll('.step-content').forEach(s => s.classList.remove('active'));
+        document.getElementById('step-' + n).classList.add('active');
+        
+        document.querySelectorAll('.step-dot').forEach((d, i) => {
+            d.classList.remove('active');
+            if (i + 1 < n) d.classList.add('done'); else d.classList.remove('done');
+        });
+        document.getElementById('sdot-' + n).classList.add('active');
+        
+        for (let i = 1; i <= 3; i++) {
+            const con = document.getElementById('scon-' + i);
+            if (i < n) con.classList.add('done'); else con.classList.remove('done');
+        }
+        state.currentStep = n;
+
+        // Show/hide sticky nav (only on step 1)
+        const stickyNav = document.getElementById('gallery-sticky-nav');
+        if (stickyNav) stickyNav.classList.toggle('hidden', n !== 1);
+        // Add bottom padding to step-panel only on step 1 (for sticky bar)
+        document.getElementById('step-panel').style.paddingBottom = n === 1 ? '80px' : '28px';
+        
+        // Scroll step-panel back to top on step change
+        document.getElementById('step-panel').scrollTop = 0;
+
+        // Auto-save when reaching step 4
+        if (n === 4) saveGlobal(true);
+    }
+
+    // ============ THEME ============
+    const themeClasses = {
+        romanesque: 'inv-romanesque', gold: 'inv-gold',
+        jardin: 'inv-jardin', ocean: 'inv-ocean',
+        nuage: 'inv-nuage', nuit: 'inv-nuit',
+        sunset: 'inv-sunset', vintage: 'inv-vintage',
+        renaissance: 'inv-renaissance', watercolor: 'inv-watercolor',
+        forest: 'inv-forest', luxe: 'inv-luxe'
+    };
+    
+    function selectTheme(el, name) {
+        // Legacy wrapper — calls the new function
+        selectThemeItem(el, name, el.closest('.theme-item')?.querySelector('.theme-item-label')?.textContent?.trim() || name);
+    }
+
+    function selectThemeItem(cardEl, name, displayName) {
+        // Deselect all cards
+        document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('selected'));
+        cardEl.classList.add('selected');
+        state.theme = name;
+
+        // Update live preview
+        const screen = document.getElementById('inv-screen');
+        screen.className = 'inv-screen ' + (themeClasses[name] || 'inv-romanesque');
+        screen.style.opacity = '0';
+        setTimeout(() => { screen.style.transition = 'opacity 0.5s'; screen.style.opacity = '1'; }, 50);
+
+        // Update sticky nav label
+        const nameEl = document.getElementById('sticky-theme-name');
+        if (nameEl) nameEl.textContent = displayName || name;
+    }
+
+    // ============ COLOR ============
+    function selectColor(el) {
+        document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+        el.classList.add('selected');
+        state.accentColor = el.dataset.color;
+        
+        // Apply to RSVP button and badge
+        const btn = document.getElementById('inv-rsvp-btn');
+        btn.style.background = state.accentColor;
+        btn.style.color = isLight(state.accentColor) ? '#1a1a1a' : '#fff';
+        btn.style.boxShadow = `0 4px 20px ${state.accentColor}60`;
+
+        document.querySelectorAll('.inv-deco').forEach(d => { d.style.color = state.accentColor; });
+    }
+
+    function isLight(hex) {
+        const r = parseInt(hex.substr(1,2),16);
+        const g = parseInt(hex.substr(3,2),16);
+        const b = parseInt(hex.substr(5,2),16);
+        return (r*299 + g*587 + b*114) / 1000 > 128;
+    }
+
+    // ============ FONT ============
+    function selectFont(el) {
+        document.querySelectorAll('.font-option').forEach(f => f.classList.remove('selected'));
+        el.classList.add('selected');
+        state.font = el.dataset.font;
+        document.getElementById('inv-names').style.fontFamily = `'${state.font}', serif`;
+    }
+
+    // ============ TOGGLES ============
+    function toggleOption(el, key) {
+        el.classList.toggle('on');
+        state[key] = el.classList.contains('on');
+        if (key === 'music') {
+            document.getElementById('music-url-field').style.display = state.music ? 'block' : 'none';
+        }
+        if (key === 'rsvp') {
+            document.getElementById('inv-rsvp-btn').style.display = state.rsvp ? 'block' : 'none';
+        }
+        updatePreview();
+    }
+
+    // ============ LIVE PREVIEW ============
+    function updatePreview() {
+        const name1 = document.getElementById('f-name1').value || 'Sarah';
+        const name2 = document.getElementById('f-name2').value || 'Emmanuel';
+        const date = document.getElementById('f-date').value || 'Samedi, 15 Juin 2026';
+        const venue = document.getElementById('f-venue').value || 'Château de la Lumière · 19h30';
+        const eventName = document.getElementById('f-event-name').value || '{{ event.name }}';
+        const message = document.getElementById('f-message').value || 'Nous serions honorés de vous compter parmi nous pour célébrer ce moment si précieux...';
+
+        document.getElementById('inv-event-name').textContent = eventName.toUpperCase();
+        document.getElementById('inv-badge').textContent = eventName.toUpperCase();
+        
+        const invPhoto = document.getElementById('inv-photo');
+        if (state.photoB64) {
+            invPhoto.src = state.photoB64;
+            invPhoto.style.display = 'block';
+            invPhoto.style.borderColor = state.accentColor;
+        } else {
+            invPhoto.style.display = 'none';
+        }
+
+        document.getElementById('inv-names').innerHTML = `${name1}<span class="and">&</span>${name2}`;
+        document.getElementById('inv-names').style.fontFamily = `'${state.font}', serif`;
+        document.getElementById('inv-date').textContent = date;
+        document.getElementById('inv-venue').textContent = venue;
+        document.getElementById('inv-message').textContent = `"${message}"`;
+    }
+
+    // ============ SAVE ============
+    function getBuiltHTML() {
+        const name1 = document.getElementById('f-name1').value || '';
+        const name2 = document.getElementById('f-name2').value || '';
+        const date = document.getElementById('f-date').value || '';
+        const venue = document.getElementById('f-venue').value || '';
+        const eventName = document.getElementById('f-event-name').value || '{{ event.name }}';
+        const message = document.getElementById('f-message').value || '';
+        const accentColor = state.accentColor;
+        const fontName = state.font;
+        const themeCls = themeClasses[state.theme] || 'inv-romanesque';
+        const showRsvp = state.rsvp;
+        const showEnvelope = state.envelope;
+        const musicUrl = state.music ? (document.getElementById('f-music-url').value || '') : '';
+        const photoB64 = state.photoB64;
+
+        return {
+            theme: state.theme, accentColor, fontName, showRsvp, showEnvelope, musicUrl, photoB64,
+            fields: { name1, name2, date, venue, eventName, message }
+        };
+    }
+
+    function getBuiltCSS() {
+        return `
+        /* Romanesque */
+        .inv-romanesque { background: linear-gradient(170deg, #120505 0%, #1f0808 50%, #120505 100%); }
+        .inv-romanesque .inv-divider { border-color: #7a3535; }
+        .inv-romanesque .inv-deco { color: #7a3535; }
+        .inv-romanesque .inv-badge { background: rgba(122,53,53,0.2); border-color: rgba(122,53,53,0.4); color: #c48080; }
+
+        /* Gold */
+        .inv-gold { background: linear-gradient(170deg, #080800 0%, #130d00 50%, #080800 100%); }
+        .inv-gold .inv-divider { border-color: #7a6a20; }
+        .inv-gold .inv-deco { color: #c9a84c; }
+        .inv-gold .inv-badge { background: rgba(201,168,76,0.1); border-color: rgba(201,168,76,0.3); color: #c9a84c; }
+
+        /* Jardin */
+        .inv-jardin { background: linear-gradient(170deg, #020802 0%, #050f05 50%, #020802 100%); }
+        .inv-jardin .inv-divider { border-color: #3a7a3a; }
+        .inv-jardin .inv-deco { color: #5aaa5a; }
+        .inv-jardin .inv-badge { background: rgba(90,170,90,0.1); border-color: rgba(90,170,90,0.3); color: #7acc7a; }
+
+        /* Ocean */
+        .inv-ocean { background: linear-gradient(170deg, #010510 0%, #030d20 50%, #010510 100%); }
+        .inv-ocean .inv-divider { border-color: #1a5a8a; }
+        .inv-ocean .inv-deco { color: #5aabdd; }
+        .inv-ocean .inv-badge { background: rgba(90,171,221,0.1); border-color: rgba(90,171,221,0.3); color: #7abedd; }
+
+        /* Nuage */
+        .inv-nuage { background: linear-gradient(170deg, #f8f8fc 0%, #eeeefc 50%, #f8f8fc 100%); color: #1a1a2e !important; }
+        .inv-nuage .inv-names, .inv-nuage .inv-date, .inv-nuage .inv-event-name, .inv-nuage .inv-details-text, .inv-nuage .inv-message { color: #1a1a2e !important; }
+        .inv-nuage .inv-divider { border-color: #aaa; }
+        .inv-nuage .inv-deco { color: #888; }
+        .inv-nuage .inv-badge { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); color: #555; }
+
+        /* Nuit */
+        .inv-nuit { background: radial-gradient(ellipse at top, #0a0a25, #02020a); }
+        .inv-nuit .inv-divider { border-color: #2a2a6a; }
+        .inv-nuit .inv-deco { color: #6060cc; }
+        .inv-nuit .inv-badge { background: rgba(96,96,204,0.1); border-color: rgba(96,96,204,0.3); color: #9090dd; }
+
+        /* Sunset */
+        .inv-sunset { background: linear-gradient(180deg, #0a0515 0%, #3d1240 30%, #8b2252 60%, #d45a20 85%, #f0a040 100%); }
+        .inv-sunset .inv-divider { border-color: #8b2252; }
+        .inv-sunset .inv-deco { color: #f0a040; }
+        .inv-sunset .inv-badge { background: rgba(212,90,32,0.2); border-color: rgba(240,160,64,0.4); color: #ffd8a8; }
+
+        /* Vintage */
+        .inv-vintage { background: linear-gradient(160deg, #2a1518 0%, #3d1f22 100%); }
+        .inv-vintage::before { content: ''; position: absolute; inset: 0; z-index: 0; background: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.02) 4px, rgba(255,255,255,0.02) 8px); }
+        .inv-vintage > * { position: relative; z-index: 1; }
+        .inv-vintage .inv-divider { border-color: #c89878; }
+        .inv-vintage .inv-deco { color: #e8c0aa; }
+        .inv-vintage .inv-badge { background: rgba(200,152,120,0.15); border-color: rgba(200,152,120,0.3); color: #e8c0aa; }
+
+        /* Renaissance */
+        .inv-renaissance { background: linear-gradient(160deg, #0a0800 0%, #1a1400 100%); }
+        .inv-renaissance::before { content: ''; position: absolute; inset: 12px; z-index: 0; border: 1px solid rgba(201,168,76,0.3); border-radius: 8px; }
+        .inv-renaissance > * { position: relative; z-index: 1; }
+        .inv-renaissance .inv-divider { border-color: #7a6a20; }
+        .inv-renaissance .inv-deco { color: #e8c870; }
+        .inv-renaissance .inv-badge { background: rgba(201,168,76,0.1); border-color: rgba(201,168,76,0.4); color: #c9a84c; border-radius: 0; }
+
+        /* Watercolor */
+        .inv-watercolor { background: linear-gradient(135deg, #f9f0f3 0%, #fce8ec 40%, #fff5e8 100%); color: #4a2a35 !important; }
+        .inv-watercolor .inv-names, .inv-watercolor .inv-date, .inv-watercolor .inv-event-name, .inv-watercolor .inv-details-text, .inv-watercolor .inv-message { color: #4a2a35 !important; }
+        .inv-watercolor .inv-divider { border-color: #c05070; }
+        .inv-watercolor .inv-deco { color: #90304a; }
+        .inv-watercolor .inv-badge { background: rgba(192,80,112,0.1); border-color: rgba(192,80,112,0.3); color: #c05070; }
+
+        /* Forest */
+        .inv-forest { background: linear-gradient(160deg, #020a04 0%, #04150a 100%); }
+        .inv-forest .inv-divider { border-color: #3a7a3a; }
+        .inv-forest .inv-deco { color: #b0d8b0; }
+        .inv-forest .inv-badge { background: rgba(122,170,122,0.1); border-color: rgba(122,170,122,0.3); color: #7aaa7a; }
+
+        /* Luxe */
+        .inv-luxe { background: linear-gradient(160deg, #000 0%, #0a0a0a 100%); }
+        .inv-luxe .inv-divider { border-color: rgba(255,255,255,0.2); }
+        .inv-luxe .inv-deco { color: #fff; }
+        .inv-luxe .inv-badge { background: transparent; border-color: rgba(255,255,255,0.5); color: #fff; }
+        `;
+    }
+
+    async function saveGlobal(silent = false) {
+        const data = getBuiltHTML();
+        const btn = document.getElementById('global-save-btn');
+        if (!silent) { btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Sauvegarde...'; btn.disabled = true; }
+
+        // Build the final HTML that will be shown to guests
+        const guestHTML = buildGuestHTML(data);
+        const cssContent = getBuiltCSS();
+
+        try {
+            const res = await fetch(SAVE_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+                body: JSON.stringify({ html: guestHTML, css: cssContent, config: JSON.stringify(data) })
+            });
+            const json = await res.json();
+            if (!silent) {
+                btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Sauvegardé !';
+                setTimeout(() => { btn.innerHTML = '<i class="bi bi-cloud-check-fill"></i> Sauvegarder'; btn.disabled = false; }, 3000);
+            }
+        } catch (e) {
+            if (!silent) { btn.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Erreur'; btn.disabled = false; }
+        }
+    }
+
+    function buildGuestHTML(data) {
+        const { accentColor, fontName, theme, fields, showRsvp, photoB64 } = data;
+        const textColor = ['nuage', 'watercolor', 'minimal'].includes(theme) ? '#1a1a2e' : '#f0f0f0';
+        
+        const photoHtml = photoB64 ? `<img src="${photoB64}" style="width:130px; height:130px; border-radius:50%; object-fit:cover; border:3px solid ${accentColor}80; margin-bottom:15px; box-shadow:0 10px 30px rgba(0,0,0,0.3);position:relative;z-index:2;">` : '';
+
+        return `
+<div class="inv-screen inv-${theme}" style="font-family: '${fontName}', serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px 30px; position: relative;">
+  <div style="font-size: 1.8rem; margin-bottom: 10px; opacity: 0.7; color: ${accentColor}; position:relative; z-index:2;">✦ ❦ ✦</div>
+  <div style="border: 1px solid ${accentColor}55; border-radius: 20px; padding: 4px 14px; font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px; color: ${accentColor}; background: ${accentColor}15; position:relative; z-index:2;">
+    ${fields.eventName.toUpperCase()}
+  </div>
+  ${photoHtml}
+  <div style="font-family: '${fontName}', serif; font-size: 2rem; line-height: 1.2; text-align: center; color: ${textColor}; position:relative; z-index:2;">
+    [prenom] [nom]<br>
+    <span style="font-style:italic; font-size:1.1rem; color: ${accentColor}88;">&amp;</span><br>
+    ${fields.name1} &amp; ${fields.name2}
+  </div>
+  <hr style="width: 60px; border: none; border-top: 1px solid ${accentColor}55; margin: 16px auto;">
+  <div style="font-size: 1.1rem; font-weight: 300; letter-spacing: 3px; text-align: center; color: ${textColor}cc;">${fields.date}</div>
+  <div style="font-size: 0.78rem; color: ${textColor}77; text-align: center; letter-spacing: 1px; margin-bottom: 20px;">${fields.venue}</div>
+  <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px 16px; font-size: 0.8rem; line-height: 1.7; color: ${textColor}aa; text-align: center; margin-bottom: 20px; font-style: italic; width: 100%;">
+    "${fields.message}"
+  </div>
+  ${showRsvp ? `<a href="?rsvp=oui" style="display: block; width: 100%; padding: 13px; border-radius: 50px; text-align: center; font-size: 0.85rem; font-weight: 600; letter-spacing: 1px; background: ${accentColor}; color: ${isLight(accentColor) ? '#1a1a1a' : '#fff'}; text-decoration: none; box-shadow: 0 4px 20px ${accentColor}60; margin-bottom: 10px;">✓ Confirmer ma présence</a>` : ''}
+  <div style="font-size: 0.65rem; color: ${textColor}44; text-align: center; letter-spacing: 1px; margin-top: 6px;">Table : [table] · Scan QR à l'entrée</div>
+</div>`.trim();
+    }
+
+    // Duplicate helper for JS
+    function isLight(hex) {
+        try {
+            const r = parseInt(hex.substr(1,2),16);
+            const g = parseInt(hex.substr(3,2),16);
+            const b = parseInt(hex.substr(5,2),16);
+            return (r*299 + g*587 + b*114) / 1000 > 128;
+        } catch(e) { return false; }
+    }
+
+    // ============ SEND OPTIONS ============
+    function copyInviteLink(url) {
+        navigator.clipboard.writeText(url).then(() => {
+            // Visual feedback on all copy buttons briefly
+            document.querySelectorAll('[onclick^="copyInviteLink"]').forEach(btn => {
+                const orig = btn.innerHTML;
+                // Only update the clicked one — we check via event
+            });
+            const toast = document.createElement('div');
+            toast.textContent = '✓ Lien copié !';
+            toast.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;padding:10px 20px;border-radius:8px;font-size:0.85rem;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(34,197,94,0.4);animation:fadeToast 2s forwards;';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }).catch(() => {
+            prompt('Copiez ce lien manuellement :', url);
+        });
+    }
+
+    // Toast animation
+    const toastStyle = document.createElement('style');
+    toastStyle.textContent = '@keyframes fadeToast{0%{opacity:0;transform:translateX(-50%) translateY(10px)}10%{opacity:1;transform:translateX(-50%) translateY(0)}80%{opacity:1}100%{opacity:0;transform:translateX(-50%) translateY(-10px)}}';
+    document.head.appendChild(toastStyle);
+
+    // Initialize preview
+    updatePreview();
+</script>
+</body>
+</html>

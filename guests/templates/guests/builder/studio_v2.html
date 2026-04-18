@@ -1,0 +1,1763 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Studio d'Invitation — {{ event.name }}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    /* ============================================================
+       DESIGN TOKENS
+    ============================================================ */
+    :root {
+      --black:   #06060e;
+      --surface: #0d0d1a;
+      --card-bg: #111122;
+      --border:  rgba(255,255,255,0.07);
+      --red:     #d63347;
+      --red-glow:rgba(214,51,71,0.35);
+      --gold:    #c9a84c;
+      --text:    #f0f0f5;
+      --muted:   rgba(240,240,245,0.45);
+      --radius:  18px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--black);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
+
+    /* ============================================================
+       TOPBAR
+    ============================================================ */
+    #topbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      height: 60px;
+      background: rgba(6,6,14,0.88);
+      backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 28px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-dot {
+      width: 32px; height: 32px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--red), #8b111c);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+    }
+    .brand-name { font-size: 0.9rem; font-weight: 600; line-height: 1.2; }
+    .brand-sub  { font-size: 0.68rem; color: var(--muted); font-weight: 400; }
+    .topbar-right { display: flex; align-items: center; gap: 8px; }
+    .tbtn {
+      padding: 7px 16px; border-radius: 8px; font-size: 0.8rem;
+      font-weight: 600; border: none; cursor: pointer; font-family: inherit;
+      display: inline-flex; align-items: center; gap: 6px;
+      text-decoration: none; transition: all 0.2s;
+    }
+    .tbtn-ghost {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border); color: var(--text);
+    }
+    .tbtn-ghost:hover { background: rgba(255,255,255,0.12); }
+    .tbtn-red {
+      background: linear-gradient(135deg, var(--red), #a82030);
+      color: #fff; box-shadow: 0 0 18px var(--red-glow);
+    }
+    .tbtn-red:hover { transform: translateY(-1px); box-shadow: 0 6px 26px var(--red-glow); }
+
+    /* progress bar */
+    #progress-bar {
+      position: fixed; top: 60px; left: 0; right: 0; z-index: 190;
+      height: 3px; background: rgba(255,255,255,0.05);
+    }
+    #progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--red), var(--gold));
+      transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+      width: 25%;
+    }
+
+    /* ============================================================
+       PAGES (gallery vs wizard)
+    ============================================================ */
+    .page { display: none; min-height: calc(100vh - 60px); padding-top: 63px; }
+    .page.active { display: block; }
+
+    /* ============================================================
+       GALLERY PAGE
+    ============================================================ */
+    #gallery-page { background: var(--black); }
+
+    .gallery-hero {
+      text-align: center;
+      padding: 52px 20px 32px;
+    }
+    .gallery-hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: rgba(214,51,71,0.12);
+      border: 1px solid rgba(214,51,71,0.25);
+      border-radius: 30px;
+      padding: 5px 14px;
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: #e87080;
+      margin-bottom: 18px;
+    }
+    .gallery-hero h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2rem, 5vw, 3.6rem);
+      font-weight: 300; letter-spacing: -0.5px;
+      line-height: 1.15; margin-bottom: 12px;
+    }
+    .gallery-hero h2 em { font-style: italic; color: var(--gold); }
+    .gallery-hero p { font-size: 0.9rem; color: var(--muted); max-width: 500px; margin: 0 auto 28px; line-height: 1.7; }
+
+    /* Category pills */
+    .cat-strip {
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; flex-wrap: wrap;
+      padding: 0 20px 28px;
+    }
+    .cat-pill {
+      padding: 7px 18px; border-radius: 30px; font-size: 0.75rem;
+      font-weight: 600; cursor: pointer; letter-spacing: 0.3px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.04); color: var(--muted);
+      transition: all 0.22s; white-space: nowrap;
+    }
+    .cat-pill:hover { background: rgba(255,255,255,0.09); color: var(--text); }
+    .cat-pill.active {
+      background: var(--red); border-color: var(--red);
+      color: #fff; box-shadow: 0 4px 18px var(--red-glow);
+    }
+
+    /* ---- Gallery grid ---- */
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 20px;
+      padding: 0 28px 60px;
+      max-width: 1300px;
+      margin: 0 auto;
+    }
+
+    /* ---- Theme card ---- */
+    .tcard {
+      position: relative; border-radius: var(--radius);
+      overflow: hidden; cursor: pointer;
+      border: 2px solid transparent;
+      transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1),
+                  border-color 0.25s, box-shadow 0.35s;
+      background: var(--card-bg);
+    }
+    .tcard:hover {
+      transform: translateY(-8px) scale(1.02);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.7);
+      z-index: 10;
+    }
+    .tcard.selected {
+      border-color: var(--red);
+      box-shadow: 0 0 0 4px var(--red-glow), 0 24px 60px rgba(0,0,0,0.6);
+    }
+    .tcard.hidden { display: none; }
+
+    /* Card inner — portrait format like real invitation */
+    .tcard-inner {
+      height: 320px; position: relative; overflow: hidden;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+
+    /* Overlay on hover */
+    .tcard-overlay {
+      position: absolute; inset: 0; z-index: 30;
+      background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 55%);
+      opacity: 0; transition: opacity 0.3s;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-end;
+      padding: 18px;
+    }
+    .tcard:hover .tcard-overlay { opacity: 1; }
+    .tcard-cta {
+      width: 100%; padding: 10px;
+      background: #fff; color: #111;
+      border-radius: 50px; border: none;
+      font-size: 0.78rem; font-weight: 700;
+      font-family: inherit; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.8px;
+    }
+    .tcard-preview-btn {
+      width: 100%; padding: 8px; margin-top: 7px;
+      background: transparent; color: rgba(255,255,255,0.8);
+      border-radius: 50px; border: 1px solid rgba(255,255,255,0.3);
+      font-size: 0.72rem; font-weight: 600;
+      font-family: inherit; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: all 0.2s;
+    }
+    .tcard-preview-btn:hover { background: rgba(255,255,255,0.1); }
+
+    /* Selected badge */
+    .tcard-check {
+      position: absolute; top: 10px; right: 10px; z-index: 40;
+      width: 28px; height: 28px; background: var(--red); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 12px; font-weight: 900;
+      opacity: 0; transform: scale(0);
+      transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      box-shadow: 0 4px 16px var(--red-glow);
+    }
+    .tcard.selected .tcard-check { opacity: 1; transform: scale(1); }
+
+    /* Category badge */
+    .tcard-badge {
+      position: absolute; top: 10px; left: 10px; z-index: 40;
+      padding: 3px 9px; border-radius: 10px;
+      font-size: 0.6rem; font-weight: 700; letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+    .badge-animated { background: rgba(214,51,71,0.8); color: #fff; }
+    .badge-gold     { background: rgba(201,168,76,0.85); color: #111; }
+    .badge-floral   { background: rgba(80,160,80,0.8); color: #fff; }
+    .badge-minimal  { background: rgba(220,220,235,0.85); color: #333; }
+    .badge-luxe     { background: rgba(180,180,255,0.15); color: #ddddf8; border: 1px solid rgba(180,180,255,0.3); }
+
+    /* Card footer */
+    .tcard-footer {
+      padding: 12px 14px;
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .tcard-name { font-size: 0.8rem; font-weight: 600; }
+    .tcard-anim-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #22c55e; animation: blink 2s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.2;} }
+
+    /* Gallery CTA bar (appears when theme is selected) */
+    #gallery-cta {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 150;
+      background: rgba(6,6,14,0.95);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+      padding: 14px 28px;
+      display: flex; align-items: center; justify-content: space-between;
+      transform: translateY(100%);
+      transition: transform 0.4s cubic-bezier(0.34,1.2,0.64,1);
+    }
+    #gallery-cta.show { transform: translateY(0); }
+    .gcta-info { font-size: 0.85rem; }
+    .gcta-info strong { display: block; font-size: 1rem; }
+    .gcta-info span { color: var(--muted); font-size: 0.78rem; }
+    .gcta-btn {
+      padding: 13px 32px; border-radius: 50px;
+      background: linear-gradient(135deg, var(--red), #a82030);
+      color: #fff; border: none; font-size: 0.9rem; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+      box-shadow: 0 6px 24px var(--red-glow);
+      display: flex; align-items: center; gap: 8px;
+      transition: all 0.2s;
+    }
+    .gcta-btn:hover { transform: scale(1.04); box-shadow: 0 10px 32px var(--red-glow); }
+
+    /* ============================================================
+       THEME ANIMATIONS — Card previews
+    ============================================================ */
+
+    /* --- Rose Éternelle --- */
+    .tp-rose { background: linear-gradient(160deg,#130308 0%,#260a12 50%,#130308 100%); }
+    .tp-rose .tcard-title { color: #f2b8c8; }
+    .tp-rose .tcard-sub   { color: #c06885; }
+    .petal {
+      position: absolute; border-radius: 50% 20% 50% 20%;
+      animation: petalFall linear infinite; pointer-events: none;
+      background: rgba(220,80,110,0.55);
+    }
+    @keyframes petalFall {
+      0%   { opacity: 0; transform: translateY(-30px) rotate(0deg) translateX(0); }
+      15%  { opacity: 0.8; }
+      100% { opacity: 0; transform: translateY(350px) rotate(400deg) translateX(25px); }
+    }
+
+    /* --- Or & Lumière --- */
+    .tp-gold { background: linear-gradient(160deg,#060400 0%,#150d00 50%,#060400 100%); }
+    .tp-gold .tcard-title { color: #e8c86a; }
+    .tp-gold .tcard-sub   { color: #a07828; }
+    .g-particle {
+      position: absolute; border-radius: 50%;
+      background: radial-gradient(circle,#e8c86a,transparent 70%);
+      animation: gFloat ease-in-out infinite; pointer-events: none;
+    }
+    @keyframes gFloat {
+      0%,100% { transform:translateY(0) scale(1); opacity:0.5; }
+      50%      { transform:translateY(-18px) scale(1.4); opacity:1; }
+    }
+
+    /* --- Jardin Floral --- */
+    .tp-garden { background: linear-gradient(160deg,#020902 0%,#061506 50%,#020902 100%); }
+    .tp-garden .tcard-title { color: #a0e8a0; }
+    .tp-garden .tcard-sub   { color: #5aa05a; }
+    .flower { position: absolute; animation: flowerSway ease-in-out infinite; pointer-events: none; font-size: 1.1rem; }
+    @keyframes flowerSway {
+      0%,100% { transform:rotate(-10deg) scale(1); }
+      50%      { transform:rotate(10deg) scale(1.12); }
+    }
+
+    /* --- Nuit Étoilée --- */
+    .tp-stars { background: radial-gradient(ellipse at top,#070725 0%,#010109 100%); }
+    .tp-stars .tcard-title { color: #c4ccfa; }
+    .tp-stars .tcard-sub   { color: #7070cc; }
+    .star {
+      position: absolute; background: #fff;
+      border-radius: 50%; animation: twinkle ease-in-out infinite; pointer-events:none;
+    }
+    @keyframes twinkle {
+      0%,100% { opacity:0.15; transform:scale(0.7); }
+      50%      { opacity:1;    transform:scale(1.4); }
+    }
+
+    /* --- Océan Mystique --- */
+    .tp-ocean { background: linear-gradient(180deg,#010614 0%,#020e25 50%,#010614 100%); }
+    .tp-ocean .tcard-title { color: #80ccf2; }
+    .tp-ocean .tcard-sub   { color: #3a88bb; }
+    .waveline {
+      position: absolute; width:220%; height:2px;
+      background: linear-gradient(90deg,transparent,rgba(90,171,221,0.5),transparent);
+      border-radius:50%; animation: waveDrift linear infinite; pointer-events:none;
+    }
+    @keyframes waveDrift {
+      0%  { transform:translateX(-55%) scaleY(1); }
+      50% { transform:translateX(-35%) scaleY(2.2); }
+      100%{ transform:translateX(-15%) scaleY(1); }
+    }
+
+    /* --- Blanc Minimaliste --- */
+    .tp-minimal { background: linear-gradient(160deg,#f5f5f8 0%,#ebebf5 100%); }
+    .tp-minimal .tcard-title { color:#2a2a2a; }
+    .tp-minimal .tcard-sub   { color:#888; }
+    .minimal-line {
+      position: absolute; background: rgba(80,80,80,0.12);
+    }
+
+    /* --- Coucher de Soleil --- */
+    .tp-sunset {
+      background: linear-gradient(180deg,#0a0515 0%,#3d1240 25%,#8b2252 55%,#d45a20 80%,#f0a040 100%);
+    }
+    .tp-sunset .tcard-title { color:#ffd8a8; }
+    .tp-sunset .tcard-sub   { color:#d08020; }
+
+    /* --- Vintage Rose --- */
+    .tp-vintage { background: linear-gradient(160deg,#2a1518 0%,#3d1f22 100%); }
+    .tp-vintage::before {
+      content:''; position:absolute; inset:0; z-index:1;
+      background: repeating-linear-gradient(45deg,transparent,transparent 5px,rgba(255,255,255,0.015) 5px,rgba(255,255,255,0.015) 10px);
+    }
+    .tp-vintage .tcard-title { color:#e8c0aa; }
+    .tp-vintage .tcard-sub   { color:#a07858; }
+
+    /* --- Renaissance --- */
+    .tp-renaissance { background: linear-gradient(160deg,#080600 0%,#161000 100%); }
+    .tp-renaissance::before {
+      content:''; position:absolute; inset:10px; z-index:1;
+      border:1px solid rgba(201,168,76,0.35); border-radius:6px;
+    }
+    .tp-renaissance .tcard-title { color:#e8cc70; }
+    .tp-renaissance .tcard-sub   { color:#a08830; }
+
+    /* --- Aquarelle Rose --- */
+    .tp-watercolor { background: linear-gradient(135deg,#f9f0f3 0%,#fce8ec 40%,#fff5e8 100%); }
+    .tp-watercolor .tcard-title { color:#8a2840; font-style:italic; }
+    .tp-watercolor .tcard-sub   { color:#c06080; }
+    .wblob {
+      position:absolute; border-radius:50%;
+      mix-blend-mode:multiply;
+      animation:blobPulse ease-in-out infinite; pointer-events:none;
+    }
+    @keyframes blobPulse {
+      0%,100%{transform:scale(1) rotate(0deg);opacity:0.45;}
+      50%{transform:scale(1.2) rotate(20deg);opacity:0.75;}
+    }
+
+    /* --- Forêt Enchantée --- */
+    .tp-forest { background: linear-gradient(160deg,#020b04 0%,#041808 100%); }
+    .tp-forest .tcard-title { color:#b8dab8; }
+    .tp-forest .tcard-sub   { color:#60a060; }
+    .leaf { position:absolute; animation:leafDrift linear infinite; pointer-events:none; }
+    @keyframes leafDrift {
+      0%  {transform:translateY(-15px) rotate(0deg);   opacity:0.75;}
+      100%{transform:translateY(340px) rotate(-300deg); opacity:0;}
+    }
+
+    /* --- Luxe Noir Diamant --- */
+    .tp-luxe { background:linear-gradient(160deg,#000 0%,#0c0c10 100%); }
+    .tp-luxe .tcard-title { color:#fff; letter-spacing:3px; font-size:0.8rem; text-transform:uppercase; }
+    .tp-luxe .tcard-sub   { color:rgba(255,255,255,0.4); }
+    .diamond {
+      position:absolute; width:6px; height:6px;
+      background:rgba(220,220,255,0.65); transform:rotate(45deg);
+      animation:diamondFloat ease-in-out infinite; pointer-events:none;
+    }
+    @keyframes diamondFloat {
+      0%,100%{opacity:0.2;transform:rotate(45deg) translateY(0);}
+      50%{opacity:0.9;transform:rotate(45deg) translateY(-12px);}
+    }
+
+    /* Card text */
+    .tcard-content {
+      position: relative; z-index: 20; text-align:center; padding: 10px 14px;
+    }
+    .tcard-ornament { font-size: 1rem; margin-bottom:8px; opacity:0.7; }
+    .tcard-title {
+      font-family:'Cormorant Garamond',serif;
+      font-size: 1.3rem; font-weight:300; line-height:1.25;
+      margin-bottom: 5px;
+    }
+    .tcard-sub {
+      font-size: 0.6rem; letter-spacing:3px; text-transform:uppercase;
+      opacity:0.7;
+    }
+    .tcard-divider {
+      width:30px; height:1px; margin:10px auto; opacity:0.4;
+    }
+
+    /* ============================================================
+       FULL-SCREEN PREVIEW MODAL
+    ============================================================ */
+    #preview-modal {
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(0,0,0,0.92);
+      backdrop-filter: blur(30px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    #preview-modal.open { opacity: 1; pointer-events: all; }
+    .modal-close {
+      position: absolute; top: 20px; right: 24px;
+      width: 42px; height: 42px; border-radius: 50%;
+      background: rgba(255,255,255,0.1); border: 1px solid var(--border);
+      color: #fff; font-size: 1.1rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s; z-index: 10;
+    }
+    .modal-close:hover { background: var(--red); border-color: var(--red); }
+    .modal-phone {
+      width: 300px; height: 620px;
+      border: 6px solid #222; border-radius: 44px;
+      background: #111;
+      box-shadow: 0 40px 100px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.04);
+      overflow: hidden; position: relative;
+    }
+    .modal-phone-notch {
+      position: absolute; top:0; left:50%; transform:translateX(-50%);
+      width:90px; height:20px; background:#111; border-radius:0 0 12px 12px; z-index:10;
+    }
+    #modal-screen { width:100%; height:100%; overflow-y:auto; }
+    #modal-screen::-webkit-scrollbar { display:none; }
+    .modal-info {
+      margin-left: 48px; max-width: 320px;
+    }
+    .modal-title {
+      font-family:'Cormorant Garamond',serif;
+      font-size: 2.2rem; font-weight:300; margin-bottom:8px; line-height:1.2;
+    }
+    .modal-desc { color:var(--muted); font-size:0.88rem; line-height:1.7; margin-bottom:24px; }
+    .modal-tags { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:24px; }
+    .modal-tag {
+      padding:5px 12px; border-radius:20px; font-size:0.72rem; font-weight:600;
+      background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--muted);
+    }
+    .modal-btn-select {
+      width:100%; padding:14px; border-radius:50px;
+      background:linear-gradient(135deg,var(--red),#a82030);
+      color:#fff; border:none; font-size:0.9rem; font-weight:700;
+      cursor:pointer; font-family:inherit;
+      box-shadow:0 6px 24px var(--red-glow);
+      transition:all 0.2s;
+    }
+    .modal-btn-select:hover { transform:scale(1.03); }
+
+    /* ============================================================
+       WIZARD PAGE
+    ============================================================ */
+    #wizard-page {
+      display: none;
+      padding-top: 63px;
+    }
+    #wizard-page.active { display: flex; min-height: calc(100vh - 63px); }
+
+    /* --- Left panel --- */
+    #wiz-panel {
+      width: 420px; min-width: 380px;
+      background: rgba(10,10,22,0.75);
+      backdrop-filter: blur(20px);
+      border-right: 1px solid var(--border);
+      height: calc(100vh - 63px);
+      overflow-y: auto; position: sticky; top: 63px;
+      padding: 28px 24px;
+    }
+    #wiz-panel::-webkit-scrollbar { width: 3px; }
+    #wiz-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius:3px; }
+
+    /* Selected theme pill in wizard */
+    .selected-theme-pill {
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(214,51,71,0.08);
+      border: 1px solid rgba(214,51,71,0.2);
+      border-radius: 12px; padding: 10px 14px; margin-bottom: 20px;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .selected-theme-pill:hover { border-color: rgba(214,51,71,0.4); background: rgba(214,51,71,0.12); }
+    .stp-preview {
+      width: 44px; height: 44px; border-radius: 8px; flex-shrink:0;
+      overflow:hidden; display:flex; align-items:center; justify-content:center;
+    }
+    .stp-text strong { display:block; font-size:0.85rem; margin-bottom:1px; }
+    .stp-text span { font-size:0.72rem; color:var(--muted); }
+    .stp-change { margin-left:auto; font-size:0.72rem; color:var(--red); font-weight:600; }
+
+    /* Steps indicator */
+    .wiz-steps {
+      display:flex; align-items:center; margin-bottom:26px;
+    }
+    .wdot {
+      flex:1; display:flex; flex-direction:column; align-items:center;
+      position:relative; cursor:pointer;
+    }
+    .wdot-circle {
+      width:30px; height:30px; border-radius:50%;
+      border:2px solid rgba(255,255,255,0.15);
+      display:flex; align-items:center; justify-content:center;
+      font-size:0.72rem; font-weight:700; color:var(--muted);
+      transition:all 0.3s; background:rgba(255,255,255,0.04);
+    }
+    .wdot.active .wdot-circle { border-color:var(--red); background:var(--red); color:#fff; box-shadow:0 0 16px var(--red-glow); }
+    .wdot.done  .wdot-circle  { border-color:#22c55e; background:#22c55e; color:#fff; }
+    .wdot-label { font-size:0.6rem; color:var(--muted); margin-top:4px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; }
+    .wdot.active .wdot-label  { color:var(--red); }
+    .wiz-connector { flex:1; height:2px; background:rgba(255,255,255,0.07); position:relative; top:-12px; transition:background 0.3s; }
+    .wiz-connector.done { background:#22c55e; }
+
+    /* Step content */
+    .wiz-step { display:none; }
+    .wiz-step.active { display:block; animation: fadeUp 0.3s ease; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
+
+    .wiz-title { font-size:1.2rem; font-weight:700; margin-bottom:4px; }
+    .wiz-sub { color:var(--muted); font-size:0.82rem; margin-bottom:20px; line-height:1.5; }
+
+    /* Form */
+    .fg { margin-bottom:16px; }
+    .fl {
+      display:block; font-size:0.72rem; font-weight:700;
+      color:rgba(255,255,255,0.6); margin-bottom:6px;
+      letter-spacing:0.5px; text-transform:uppercase;
+    }
+    .fi, .fs, .fta {
+      width:100%; background:rgba(255,255,255,0.04);
+      border:1px solid rgba(255,255,255,0.1);
+      border-radius:10px; padding:11px 14px;
+      color:var(--text); font-size:0.88rem; font-family:inherit;
+      transition:border-color 0.2s,box-shadow 0.2s;
+    }
+    .fs option { background:#1a1a2e; }
+    .fta { resize:vertical; min-height:78px; }
+    .fi:focus,.fs:focus,.fta:focus {
+      outline:none; border-color:var(--red); box-shadow:0 0 0 3px rgba(214,51,71,0.12);
+    }
+    .fi-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+    /* Toggles */
+    .trow {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:11px 13px; background:rgba(255,255,255,0.03);
+      border:1px solid var(--border); border-radius:10px; margin-bottom:8px;
+    }
+    .trow-lbl { font-size:0.82rem; color:rgba(255,255,255,0.8); }
+    .trow-sub { font-size:0.68rem; color:var(--muted); margin-top:2px; }
+    .tog {
+      width:40px; height:22px; background:rgba(255,255,255,0.1);
+      border-radius:11px; cursor:pointer; position:relative;
+      border:none; flex-shrink:0; transition:background 0.3s;
+    }
+    .tog.on { background:var(--red); }
+    .tog::after {
+      content:''; position:absolute; top:3px; left:3px;
+      width:16px; height:16px; background:#fff; border-radius:50%;
+      transition:transform 0.3s;
+    }
+    .tog.on::after { transform:translateX(18px); }
+
+    /* Color swatches */
+    .color-row { display:flex; gap:7px; flex-wrap:wrap; }
+    .cswatch {
+      width:30px; height:30px; border-radius:50%; cursor:pointer;
+      border:2px solid transparent; transition:all 0.2s;
+    }
+    .cswatch:hover,.cswatch.sel { border-color:#fff; transform:scale(1.12); }
+
+    /* Font picker */
+    .font-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .font-opt {
+      padding:10px; background:rgba(255,255,255,0.04);
+      border:1px solid var(--border); border-radius:8px;
+      cursor:pointer; text-align:center; transition:all 0.2s;
+      font-size:0.82rem;
+    }
+    .font-opt:hover { background:rgba(255,255,255,0.08); }
+    .font-opt.sel { border-color:var(--red); background:rgba(214,51,71,0.1); }
+
+    /* Step nav buttons */
+    .wiz-nav { display:flex; gap:10px; padding-top:18px; margin-top:10px; border-top:1px solid var(--border); }
+    .nav-prev,.nav-next {
+      flex:1; padding:11px; border-radius:10px; font-size:0.85rem;
+      font-weight:600; border:none; cursor:pointer; font-family:inherit;
+      display:flex; align-items:center; justify-content:center; gap:7px;
+      transition:all 0.2s;
+    }
+    .nav-prev { background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); }
+    .nav-prev:hover { background:rgba(255,255,255,0.1); }
+    .nav-next { background:linear-gradient(135deg,var(--red),#a82030); color:#fff; box-shadow:0 0 18px var(--red-glow); }
+    .nav-next:hover { transform:translateY(-2px); box-shadow:0 6px 28px var(--red-glow); }
+
+    /* Send options */
+    .send-list { display:grid; gap:10px; }
+    .send-item {
+      display:flex; align-items:center; gap:12px; padding:13px 14px;
+      background:rgba(255,255,255,0.04); border:1px solid var(--border);
+      border-radius:12px; cursor:pointer; transition:all 0.22s;
+      text-decoration:none; color:var(--text);
+    }
+    .send-item:hover { border-color:rgba(255,255,255,0.18); background:rgba(255,255,255,0.07); transform:translateX(4px); }
+    .send-icon {
+      width:42px; height:42px; border-radius:10px;
+      display:flex; align-items:center; justify-content:center; font-size:1.15rem; flex-shrink:0;
+    }
+    .send-text strong { display:block; font-size:0.85rem; margin-bottom:1px; }
+    .send-text span { font-size:0.73rem; color:var(--muted); }
+
+    /* invite list */
+    .invite-row {
+      display:flex; align-items:center; gap:9px;
+      padding:9px 11px; border-bottom:1px solid var(--border);
+      transition:background 0.15s;
+    }
+    .invite-row:last-child { border-bottom:none; }
+    .invite-row:hover { background:rgba(255,255,255,0.03); }
+    .invite-av {
+      width:32px; height:32px; border-radius:50%; flex-shrink:0;
+      background:linear-gradient(135deg,rgba(214,51,71,0.5),rgba(130,20,35,0.5));
+      display:flex; align-items:center; justify-content:center;
+      font-size:0.7rem; font-weight:700;
+    }
+    .invite-name { flex:1; font-size:0.8rem; font-weight:600; }
+    .invite-code { font-size:0.65rem; color:var(--muted); }
+    .invite-actions { display:flex; gap:5px; }
+    .iabtn {
+      padding:4px 9px; border-radius:6px; font-size:0.68rem; font-weight:600;
+      border:none; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:3px; transition:all 0.2s;
+    }
+    .iabtn-view { background:rgba(214,51,71,0.2); border:1px solid rgba(214,51,71,0.35); color:#fff; text-decoration:none; }
+    .iabtn-copy { background:rgba(255,255,255,0.06); border:1px solid var(--border); color:rgba(255,255,255,0.65); }
+
+    /* --- Right preview panel --- */
+    #wiz-preview {
+      flex:1; display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      padding:30px; position:relative; overflow:hidden;
+    }
+    .plive {
+      position:absolute; top:18px; left:50%; transform:translateX(-50%);
+      background:rgba(255,255,255,0.05); border:1px solid var(--border);
+      border-radius:20px; padding:4px 13px;
+      font-size:0.68rem; color:var(--muted); letter-spacing:1px;
+      display:flex; align-items:center; gap:6px; text-transform:uppercase;
+    }
+    .plive-dot { width:6px;height:6px;background:#22c55e;border-radius:50%; animation:blink 1.5s ease-in-out infinite; }
+    .phone {
+      width:300px; height:600px;
+      background:#111; border-radius:42px;
+      border:5px solid #222;
+      box-shadow:0 30px 80px rgba(0,0,0,0.8),0 0 0 1px rgba(255,255,255,0.04),inset 0 0 0 2px #1a1a1a;
+      overflow:hidden; position:relative; transition:all 0.5s;
+    }
+    .phone-notch {
+      position:absolute; top:0; left:50%; transform:translateX(-50%);
+      width:88px;height:20px;background:#111;border-radius:0 0 12px 12px;z-index:10;
+    }
+    #phone-screen { width:100%; height:100%; overflow-y:auto; scroll-behavior:smooth; }
+    #phone-screen::-webkit-scrollbar { display:none; }
+
+    /* ============================================================
+       INVITATION CONTENT (phone preview themes)
+    ============================================================ */
+    .inv {
+      min-height:100%; display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      padding:40px 20px 30px; position:relative; overflow:hidden;
+    }
+
+    .inv-romanesque { background:linear-gradient(170deg,#120505 0%,#1f0808 50%,#120505 100%); }
+    .inv-gold        { background:linear-gradient(170deg,#080800 0%,#130d00 50%,#080800 100%); }
+    .inv-jardin      { background:linear-gradient(170deg,#020802 0%,#050f05 50%,#020802 100%); }
+    .inv-ocean       { background:linear-gradient(170deg,#010510 0%,#030d20 50%,#010510 100%); }
+    .inv-nuage       { background:linear-gradient(170deg,#f8f8fc,#ededf8); }
+    .inv-nuit        { background:radial-gradient(ellipse at top,#0a0a25,#02020a); }
+    .inv-sunset      { background:linear-gradient(180deg,#0a0515 0%,#3d1240 30%,#8b2252 60%,#d45a20 85%,#f0a040 100%); }
+    .inv-vintage     { background:linear-gradient(160deg,#2a1518 0%,#3d1f22 100%); }
+    .inv-renaissance { background:linear-gradient(160deg,#0a0800 0%,#1a1400 100%); }
+    .inv-watercolor  { background:linear-gradient(135deg,#f9f0f3 0%,#fce8ec 40%,#fff5e8 100%); }
+    .inv-forest      { background:linear-gradient(160deg,#020a04 0%,#04150a 100%); }
+    .inv-luxe        { background:linear-gradient(160deg,#000 0%,#0a0a0a 100%); }
+
+    .inv-deco    { font-size: 1.6rem; margin-bottom:10px; opacity:0.65; }
+    .inv-badge   { border:1px solid; border-radius:20px; padding:3px 13px; font-size:0.62rem; letter-spacing:2px; text-transform:uppercase; margin-bottom:14px; }
+    .inv-evname  { font-size: 0.8rem; letter-spacing:2px; text-transform:uppercase; margin-bottom:10px; color:rgba(255,255,255,0.55); }
+    .inv-names   { font-family:'Playfair Display',serif; font-size:1.9rem; line-height:1.2; text-align:center; margin-bottom:4px; }
+    .inv-and     { font-style:italic; font-size:1rem; display:block; color:rgba(255,255,255,0.45); }
+    .inv-hr      { width:50px; border:none; border-top:1px solid; margin:14px auto; position:relative; }
+    .inv-hr::before { content:'✦'; position:absolute; top:-8px; left:50%; transform:translateX(-50%); font-size:0.65rem; padding:0 4px; }
+    .inv-date    { font-size:1rem; font-weight:300; letter-spacing:3px; text-align:center; margin-bottom:5px; }
+    .inv-venue   { font-size:0.73rem; color:rgba(255,255,255,0.45); text-align:center; letter-spacing:1px; margin-bottom:18px; }
+    .inv-msg     { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07); border-radius:10px; padding:13px 14px; font-size:0.75rem; line-height:1.7; color:rgba(255,255,255,0.65); text-align:center; font-style:italic; margin-bottom:18px; width:100%; }
+    .inv-rsvp    { display:block; width:100%; padding:12px; border-radius:50px; text-align:center; font-size:0.8rem; font-weight:600; letter-spacing:1px; border:none; cursor:pointer; font-family:'Playfair Display',serif; transition:all 0.3s; margin-bottom:8px; }
+    .inv-qrhint  { font-size:0.6rem; color:rgba(255,255,255,0.25); text-align:center; letter-spacing:1px; }
+    .inv-photo   { display:none; width:120px; height:120px; border-radius:50%; object-fit:cover; border:3px solid rgba(255,255,255,0.2); margin-bottom:13px; box-shadow:0 10px 30px rgba(0,0,0,0.4); }
+
+    /* Light themes fix */
+    .inv-nuage .inv-evname,.inv-nuage .inv-names,.inv-nuage .inv-date,.inv-nuage .inv-venue,.inv-nuage .inv-msg  { color:#1a1a2e !important; }
+    .inv-nuage .inv-msg  { background:rgba(0,0,0,0.04); border-color:rgba(0,0,0,0.08); color:#333 !important; }
+    .inv-nuage .inv-and  { color:#555 !important; }
+    .inv-nuage .inv-badge { background:rgba(0,0,0,0.05); border-color:rgba(0,0,0,0.1); color:#555; }
+    .inv-nuage .inv-rsvp { color:#fff !important; }
+
+    .inv-watercolor .inv-evname,.inv-watercolor .inv-names,.inv-watercolor .inv-date,.inv-watercolor .inv-venue { color:#4a2a35 !important; }
+    .inv-watercolor .inv-msg { background:rgba(0,0,0,0.03); color:#664050 !important; border-color:rgba(192,80,112,0.2); }
+    .inv-watercolor .inv-and { color:#a06070 !important; }
+    .inv-watercolor .inv-badge { background:rgba(192,80,112,0.1); color:#c05070; }
+
+    /* Responsive */
+    @media(max-width:920px) {
+      #wiz-panel { width:100%; min-width:unset; height:auto; position:static; }
+      #wiz-preview { display:none; }
+      #wizard-page.active { flex-direction:column; }
+      .gallery-grid { grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; padding:0 16px 80px; }
+      .tcard-inner { height:220px; }
+    }
+    @media(max-width:480px) {
+      .gallery-grid { grid-template-columns:1fr 1fr; gap:10px; padding:0 12px 80px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- PARTICLES -->
+<canvas id="cvs" style="position:fixed;top:0;left:0;pointer-events:none;z-index:0;opacity:0.4;"></canvas>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="brand">
+    <div class="brand-dot">✉️</div>
+    <div>
+      <div class="brand-name">Studio d'Invitation</div>
+      <div class="brand-sub">{{ event.name }}</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <a href="{% url 'guests:home' %}" class="tbtn tbtn-ghost"><i class="bi bi-arrow-left"></i> Retour</a>
+    <button class="tbtn tbtn-red" id="save-btn" onclick="saveGlobal()"><i class="bi bi-cloud-check-fill"></i> Sauvegarder</button>
+  </div>
+</div>
+<div id="progress-bar"><div id="progress-fill"></div></div>
+
+<!-- ============================================================
+     PAGE 1 : GALLERY
+============================================================ -->
+<div id="gallery-page" class="page active">
+
+  <div class="gallery-hero">
+    <div class="gallery-hero-eyebrow">✦ Studio Premium ✦</div>
+    <h2>Choisissez votre <em>thème</em><br>d'invitation</h2>
+    <p>12 designs animés, uniques, créés pour vous. Survolez pour voir l'animation live, double-cliquez pour une prévisualisation en plein écran.</p>
+  </div>
+
+  <!-- Category filter -->
+  <div class="cat-strip">
+    <div class="cat-pill active" onclick="filterGallery(this,'all')">✨ Tous</div>
+    <div class="cat-pill" onclick="filterGallery(this,'animated')">🎬 Animés</div>
+    <div class="cat-pill" onclick="filterGallery(this,'gold')">💛 Or & Luxe</div>
+    <div class="cat-pill" onclick="filterGallery(this,'floral')">🌸 Floral</div>
+    <div class="cat-pill" onclick="filterGallery(this,'minimal')">☁️ Minimaliste</div>
+    <div class="cat-pill" onclick="filterGallery(this,'dark')">🌙 Sombre</div>
+  </div>
+
+  <!-- Gallery Grid -->
+  <div class="gallery-grid" id="gallery-grid">
+
+    <!-- 1. Rose Éternelle -->
+    <div class="tcard" data-theme="romanesque" data-name="🌹 Rose Éternelle"
+         data-cats="animated floral"
+         onclick="selectCard(this)" ondblclick="openPreview('romanesque')">
+      <div class="tcard-check">✓</div>
+      <span class="tcard-badge badge-animated">Animé</span>
+      <div class="tcard-inner tp-rose" id="ci-rose">
+        <div class="tcard-content">
+          <div class="tcard-ornament">❦</div>
+          <div class="tcard-title">Rose Éternelle</div>
+          <div class="tcard-divider" style="background:rgba(220,80,110,0.4)"></div>
+          <div class="tcard-sub">15 · JUIN · 2026</div>
+        </div>
+      </div>
+      <div class="tcard-overlay">
+        <button class="tcard-cta" onclick="event.stopPropagation();selectCardAndGo(this.closest('.tcard'))">
+          <i class="bi bi-check-circle"></i> Choisir ce thème
+        </button>
+        <button class="tcard-preview-btn" onclick="event.stopPropagation();openPreview('romanesque')">
+          <i class="bi bi-eye"></i> Voir en plein écran
+        </button>
+      </div>
+      <div class="tcard-footer">
+        <span class="tcard-name">Rose Éternelle</span>
+        <div class="tcard-anim-dot" title="Animation live"></div>
+      </div>
+    </div>
+
+    <!-- 2. Or & Lumière -->
+    <div class="tcard" data-theme="gold" data-name="✨ Or & Lumière"
+         data-cats="animated gold"
+         onclick="selectCard(this)" ondblclick="openPreview('gold')">
+      <div class="tcard-check">✓</div>
+      <span class="tcard-badge badge-gold">Or & Luxe</span>
+      <div class="tcard-inner tp-gold" id="ci-gold">
+        <div class="tcard-content">
+          <div class="tcard-ornament" style="color:#c9a84c">✦</div>
+          <div class="tcard-title">Or &amp; Lumière</div>
+          <div class="tcard-divider" style="background:rgba(201,168,76,0.4)"></div>
+          <div class="tcard-sub">15 · JUIN · 2026</div>
+        </div>
+      </div>
+      <div class="tcard-overlay">
+        <button class="tcard-cta" onclick="event.stopPropagation();selectCardAndGo(this.closest('.tcard'))">
+          <i class="bi bi-check-circle"></i> Choisir ce thème
+        </button>
+        <button class="tcard-preview-btn" onclick="event.stopPropagation();openPreview('gold')">
+          <i class="bi bi-eye"></i> Voir en plein écran
+        </button>
+      </div>
+      <div class="tcard-footer">
+        <span class="tcard-name">Or &amp; Lumière</span>
+        <div class="tcard-anim-dot"></div>
+      </div>
+    </div>
+
+    <!-- 3. Jardin Floral -->
+    <div class="tcard" data-theme="jardin" data-name="🌿 Jardin Floral"
+         data-cats="animated floral"
+         onclick="selectCard(this)" ondblclick="openPreview('jardin')">
+      <div class="tcard-check">✓</div>
+      <span class="tcard-badge badge-floral">Floral</span>
+      <div class="tcard-inner tp-garden" id="ci-garden">
+        <div class="tcard-content">
+          <div class="tcard-ornament">🌿</div>
+          <div class="tcard-title">Jardin Floral</div>
+          <div class="tcard-divider" style="background:rgba(90,160,90,0.4)"></div>
+          <div class="tcard-sub">15 · JUIN · 2026</div>
+        </div>
+      </div>
+      <div class="tcard-overlay">
+        <button class="tcard-cta" onclick="event.stopPropagation();selectCardAndGo(this.closest('.tcard'))"><i class="bi bi-check-circle"></i> Choisir ce thème</button>
+        <button class="tcard-preview-btn" onclick="event.stopPropagation();openPreview('jardin')"><i class="bi bi-eye"></i> Voir en plein écran</button>
+      </div>
+      <div class="tcard-footer"><span class="tcard-name">Jardin Floral</span><div class="tcard-anim-dot"></div></div>
+    </div>
+
+    <!-- 4. Nuit Étoilée -->
+    <div class="tcard" data-theme="nuit" data-name="🌙 Nuit Étoilée"
+         data-cats="animated dark"
+         onclick="selectCard(this)" ondblclick="openPreview('nuit')">
+      <div class="tcard-check">✓</div>
+      <span class="tcard-badge badge-animated">Animé</span>
+      <div class="tcard-inner tp-stars" id="ci-stars">
+        <div class="tcard-content">
+          <div class="tcard-ornament" style="color:#9090cc">✦ ✦ ✦</div>
+          <div class="tcard-title">Nuit Étoilée</div>
+          <div class="tcard-divider" style="background:rgba(100,100,200,0.4)"></div>
+          <div class="tcard-sub">15 · JUIN · 2026</div>
+        </div>
+      </div>
+      <div class="tcard-overlay">
+        <button class="tcard-cta" onclick="event.stopPropagation();selectCardAndGo(this.closest('.tcard'))"><i class="bi bi-check-circle"></i> Choisir ce thème</button>
+        <button class="tcard-preview-btn" onclick="event.stopPropagation();openPreview('nuit')"><i class="bi bi-eye"></i> Voir en plein écran</button>
+      </div>
+      <div class="tcard-footer"><span class="tcard-name">Nuit Étoilée</span><div class="tcard-anim-dot"></div></div>
+    </div>
+
+    <!-- 5. Océan Mystique -->
+    <div class="tcard" data-theme="ocean" data-name="🌊 Océan Mystique"
+         data-cats="animated dark"
+         onclick="selectCard(this)" ondblclick="openPreview('ocean')">
+      <div class="tcard-check">✓</div>
+      <span class="tcard-badge badge-animated">Animé</span>
+      <div class="tcard-inner tp-ocean" id="ci-ocean">
+        <div class="tcard-content">
+          <div class="tcard-ornament" style="color:#5aabdd">〰</div>
+          <div class="tcard-title">Océan Mystique</div>
+          <div class="tcard-divider" style="background:rgba(90,171,221,0.4)"></div>
+          <div class="tcard-sub">15 · JUIN · 2026</div>
+        </div>
+      </div>
+      <div class="tcard-overlay">
+        <button class="tcard-cta" onclick="event.stopPropagation();selectCardAndGo(this.closest('.tcard'))"><i class="bi bi-check-circle"></i> Choisir ce thème</button>
+        <button class="tcard-preview-btn" onclick="event.stopPropagation();openPreview('ocean')"><i class="bi bi-eye"></i> Voir en plein écran</button>
+      </div>
+      <div class="tcard-footer"><span class="tcard-name">Océan Mystique</span><div class="tcard-anim-dot"></div></div>
+    </div>
+
+    <!-- 6. Blanc Minimaliste -->
+    <div class="tcard" data-theme="nuage" data-name="☁️ Blanc Minimaliste"
+         data-cats="minimal"
+         onclick="selectCard(this)" ondblclick="openPreview('nuage')">
+      <div class="tcard-check" style="background:#333">✓</div>
+      <span class="tcard-badge badge-minimal">Minimal</span>
+      <div class="tcard-inner tp-minimal" id="ci-minimal">
+        <div class="tcard-content">
+          <div class="tcard-ornament" style="color:#555">— ◇ —</div>
+          <div class="tcard-title" style="color:#2a2a2a">Blanc Minimaliste</div>
+          <div class="tcard-divider" style="background:rgba(100,100,100,0.3)"></div>
+          <div class="tcard-sub" style="color:#888">15 · JUIN · 2026</div>
+        </div>
+      </div>
+      <div class="tcard-overlay">
+        <button class="tcard-cta" onclick="event.stopPropagation();selectCardAndGo(this.closest('.tcard'))"><i class="bi bi-check-circle"></i> Choisir ce thème</button>
+        <button class="tcard-preview-btn" onclick="event.stopPropagation();openPreview('nuage')"><i class="bi bi-eye"></i> Voir en plein écran</button>
+      </div>
+      <div class="tcard-footer" style="background:#f5f5f7; border-top:1px solid #eee;">
+        <span class="tcard-name" style="color:#333">Blanc Minimaliste</span>
+      </div>
+    </div>
+
+    <!-- 7. Coucher de Soleil -->
+    <div class="tcard" data-theme="sunset" data-name="🌅 Coucher de Soleil"
+         data-cats="animated dark"
+         onclick="selectCard(this)" ondblclick="openPreview('sunset')">
+      <div class="tcard-check">✓</div>
+      <span class="tcard-badge badge-animated">Animé</span>
+      <div class="tcard-inner tp-sunset">
+        <div class="tcard-content">
+          <div class="tcard-ornament" style="color:#f0a040">◈</div>
+          <div class="tcard-title">Coucher de Soleil</div>
+          <div class="tcard-divider" style="background:rgba(240,160,64,0.4)"></div>
+          <div class="tcard-sub">15 · JUIN · 2026</div>
+        </div>
+      </div>
+      <div class="tcard-overlay">
+        <button class="tcard-cta" onclick="event.stopPropagation();selectCardAndGo(this.closest('.tcard'))"><i class="bi bi-check-circle"></i> Choisir ce thème</button>
+        <button class="tcard-preview-btn" onclick="event.stopPropagation();openPreview('sunset')"><i class="bi bi-eye"></i> Voir en plein écran</button>
+      </div>
+      <div class="tcard-footer"><span class="tcard-name">Coucher de Soleil</span><div class="tcard-anim-dot"></div></div>
+    </div>
+
+    <!-- 8. Vintage Rose -->
+    <div class="tcard" data-theme="vintage" data-name="🕊️ Vintage Rose"
+         data-cats="minimal floral"
+         onclick="selectCard(this)" ondblclick="openPreview('vintage')">
+      <div class="tcard-check">✓</div>
+      <span class="tcard-badge badge-floral">Vintage</span>
+      <div class="tcard-inner tp-vintage">
+        <div class="tcard-content" style="position:relative;z-index:5">
+          <div class="tcard-ornament" style="color:#c89878">✿</div>
+          <div class="tcard-title">Vintage Rose</div>
+          <div class="tcard-divider" style="background:rgba(200,152,120,0.4)"></div>
+          <div class="tcard-sub">15 · JUIN · 2026</div>
+        </div>
+      </div>
+      <div class="tcard-overlay">
+        <button class="tcard-cta" onclick="event.stopPropagation();selectCardAndGo(this.closest('.tcard'))"><i class="bi bi-check-circle"></i> Choisir ce thème</button>
+        <button class="tcard-preview-btn" onclick="event.stopPropagation();openPreview('vintage')"><i class="bi bi-eye"></i> Voir en plein écran</button>
+      </div>
+      <div class="tcard-footer"><span class="tcard-name">Vintage Rose</span></div>
+    </div>
+
+    <!-- 9. Renaissance -->
+    <div class="tcard" data-theme="renaissance" data-name="👑 Renaissance"
+         data-cats="gold minimal"
+         onclick="selectCard(this)" ondblclick="openPreview('renaissance')">
+      <div class="tcard-check">✓</div>
+      <span class="tcard-badge badge-gold">Or</span>
+      <div class="tcard-inner tp-renaissance">
+        <div class="tcard-content" style="position:relative;z-index:5">
+          <div class="tcard-ornament" style="color:#c9a84c">❋</div>
+          <div class="tcard-title">Renaissance</div>
+          <div class="tcard-divider" style="background:rgba(201,168,76,0.4)"></div>
+          <div class="tcard-sub">15 · JUIN · 2026</div>
+        </div>
+      </div>
+      <div class="tcard-overlay">
+        <button class="tcard-cta" onclick="event.stopPropagation();selectCardAndGo(this.closest('.tcard'))"><i class="bi bi-check-circle"></i> Choisir ce thème</button>
+        <button class="tcard-preview-btn" onclick="event.stopPropagation();openPreview('renaissance')"><i class="bi bi-eye"></i> Voir en plein écran</button>
+      </div>
+      <div class="tcard-footer"><span class="tcard-name">Renaissance</span><div class="tcard-anim-dot"></div></div>
+    </div>
+
+    <!-- 10. Aquarelle Rose -->
+    <div class="tcard" data-theme="watercolor" data-name="🎨 Aquarelle Rose"
+         data-cats="animated floral"
+         onclick="selectCard(this)" ondblclick="openPreview('watercolor')">
+      <div class="tcard-check" style="background:#c05070">✓</div>
+      <span class="tcard-badge badge-floral">Aquarelle</span>
+      <div class="tcard-inner tp-watercolor" id="ci-water">
+        <div class="tcard-content">
+          <div class="tcard-ornament" style="color:#c05070">❋</div>
+          <div class="tcard-title">Aquarelle Rose</div>
+          <div class="tcard-divider" style="background:rgba(192,80,112,0.4)"></div>
+          <div class="tcard-sub" style="color:#c05070">15 · JUIN · 2026</div>
+        </div>
+      </div>
+      <div class="tcard-overlay">
+        <button class="tcard-cta" onclick="event.stopPropagation();selectCardAndGo(this.closest('.tcard'))"><i class="bi bi-check-circle"></i> Choisir ce thème</button>
+        <button class="tcard-preview-btn" onclick="event.stopPropagation();openPreview('watercolor')"><i class="bi bi-eye"></i> Voir en plein écran</button>
+      </div>
+      <div class="tcard-footer" style="background:#fdf0f2"><span class="tcard-name" style="color:#c05070">Aquarelle Rose</span><div class="tcard-anim-dot"></div></div>
+    </div>
+
+    <!-- 11. Forêt Enchantée -->
+    <div class="tcard" data-theme="forest" data-name="🌲 Forêt Enchantée"
+         data-cats="animated floral dark"
+         onclick="selectCard(this)" ondblclick="openPreview('forest')">
+      <div class="tcard-check">✓</div>
+      <span class="tcard-badge badge-floral">Forêt</span>
+      <div class="tcard-inner tp-forest" id="ci-forest">
+        <div class="tcard-content">
+          <div class="tcard-ornament" style="color:#7aaa7a">🌿</div>
+          <div class="tcard-title">Forêt Enchantée</div>
+          <div class="tcard-divider" style="background:rgba(90,160,90,0.4)"></div>
+          <div class="tcard-sub">15 · JUIN · 2026</div>
+        </div>
+      </div>
+      <div class="tcard-overlay">
+        <button class="tcard-cta" onclick="event.stopPropagation();selectCardAndGo(this.closest('.tcard'))"><i class="bi bi-check-circle"></i> Choisir ce thème</button>
+        <button class="tcard-preview-btn" onclick="event.stopPropagation();openPreview('forest')"><i class="bi bi-eye"></i> Voir en plein écran</button>
+      </div>
+      <div class="tcard-footer"><span class="tcard-name">Forêt Enchantée</span><div class="tcard-anim-dot"></div></div>
+    </div>
+
+    <!-- 12. Luxe Noir Diamant -->
+    <div class="tcard" data-theme="luxe" data-name="💎 Luxe Noir Diamant"
+         data-cats="animated dark minimal"
+         onclick="selectCard(this)" ondblclick="openPreview('luxe')">
+      <div class="tcard-check">✓</div>
+      <span class="tcard-badge badge-luxe">Luxe</span>
+      <div class="tcard-inner tp-luxe" id="ci-luxe">
+        <div class="tcard-content">
+          <div class="tcard-ornament" style="color:rgba(255,255,255,0.6)">◇ ◆ ◇</div>
+          <div class="tcard-title">LUXE NOIR</div>
+          <div class="tcard-divider" style="background:rgba(255,255,255,0.2)"></div>
+          <div class="tcard-sub" style="color:rgba(255,255,255,0.4)">15 · JUIN · 2026</div>
+        </div>
+      </div>
+      <div class="tcard-overlay">
+        <button class="tcard-cta" onclick="event.stopPropagation();selectCardAndGo(this.closest('.tcard'))"><i class="bi bi-check-circle"></i> Choisir ce thème</button>
+        <button class="tcard-preview-btn" onclick="event.stopPropagation();openPreview('luxe')"><i class="bi bi-eye"></i> Voir en plein écran</button>
+      </div>
+      <div class="tcard-footer" style="background:#050505"><span class="tcard-name" style="color:rgba(255,255,255,0.7)">Luxe Noir Diamant</span><div class="tcard-anim-dot"></div></div>
+    </div>
+
+  </div><!-- /gallery-grid -->
+
+  <!-- Bottom CTA bar -->
+  <div id="gallery-cta">
+    <div class="gcta-info">
+      <strong id="gcta-name">—</strong>
+      <span>Thème sélectionné · Cliquez pour personnaliser</span>
+    </div>
+    <button class="gcta-btn" onclick="goToWizard()">
+      Personnaliser <i class="bi bi-arrow-right"></i>
+    </button>
+  </div>
+</div>
+
+<!-- ============================================================
+     FULL-SCREEN PREVIEW MODAL
+============================================================ -->
+<div id="preview-modal">
+  <button class="modal-close" onclick="closePreview()"><i class="bi bi-x"></i></button>
+  <div class="modal-phone">
+    <div class="modal-phone-notch"></div>
+    <div id="modal-screen">
+      <div class="inv inv-romanesque" id="modal-inv">
+        <div class="inv-deco inv-ideco">✦ ❦ ✦</div>
+        <div class="inv-badge inv-ibadge">MARIAGE</div>
+        <div class="inv-evname" id="modal-evname">Notre Mariage</div>
+        <div class="inv-names" id="modal-names">Sarah<span class="inv-and" id="modal-and">&amp;</span>Emmanuel</div>
+        <hr class="inv-hr inv-ihr">
+        <div class="inv-date" id="modal-date">Samedi, 15 Juin 2026</div>
+        <div class="inv-venue" id="modal-venue">Château de la Lumière · 19h30</div>
+        <div class="inv-msg" id="modal-msg">"Nous serions honorés de votre présence pour célébrer ce moment unique…"</div>
+        <button class="inv-rsvp" id="modal-rsvp" style="background:linear-gradient(135deg,#dc3545,#8b111c);color:#fff;">✓ Confirmer ma présence</button>
+        <div class="inv-qrhint">QR Code VIP · Invité Personnalisé</div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-info">
+    <div class="modal-title" id="modal-theme-name">Rose Éternelle</div>
+    <div class="modal-desc" id="modal-theme-desc">Un thème romantique avec des pétales de roses animés. Parfait pour un mariage élégant et intemporel.</div>
+    <div class="modal-tags" id="modal-tags">
+      <span class="modal-tag">🎬 Animé</span>
+      <span class="modal-tag">🌸 Floral</span>
+    </div>
+    <button class="modal-btn-select" onclick="selectModalTheme()">
+      <i class="bi bi-check-circle"></i> Choisir ce thème et personnaliser
+    </button>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE 2 : WIZARD
+============================================================ -->
+<div id="wizard-page">
+
+  <!-- Left panel -->
+  <div id="wiz-panel">
+
+    <!-- Selected theme reminder -->
+    <div class="selected-theme-pill" onclick="backToGallery()">
+      <div class="stp-preview" id="stp-preview-mini"></div>
+      <div class="stp-text">
+        <strong id="stp-name">Rose Éternelle</strong>
+        <span>Thème sélectionné</span>
+      </div>
+      <span class="stp-change">Changer →</span>
+    </div>
+
+    <!-- Step indicator -->
+    <div class="wiz-steps">
+      <div class="wdot active" id="wd-1" onclick="wizStep(1)">
+        <div class="wdot-circle">1</div>
+        <div class="wdot-label">Contenu</div>
+      </div>
+      <div class="wiz-connector" id="wc-1"></div>
+      <div class="wdot" id="wd-2" onclick="wizStep(2)">
+        <div class="wdot-circle">2</div>
+        <div class="wdot-label">Style</div>
+      </div>
+      <div class="wiz-connector" id="wc-2"></div>
+      <div class="wdot" id="wd-3" onclick="wizStep(3)">
+        <div class="wdot-circle">3</div>
+        <div class="wdot-label">Envoyer</div>
+      </div>
+    </div>
+
+    <!-- STEP W1 : Content -->
+    <div class="wiz-step active" id="ws-1">
+      <div class="wiz-title">✍️ Informations de l'événement</div>
+      <div class="wiz-sub">Remplissez les champs. L'aperçu se met à jour en temps réel.</div>
+
+      <div class="fg">
+        <label class="fl">Nom de l'événement</label>
+        <input type="text" class="fi" id="f-evname" placeholder="Notre Mariage" value="{{ event.name }}" oninput="updatePreview()">
+      </div>
+      <div class="fi-row">
+        <div class="fg">
+          <label class="fl">Prénom (Mariée)</label>
+          <input type="text" class="fi" id="f-n1" placeholder="Sarah" oninput="updatePreview()">
+        </div>
+        <div class="fg">
+          <label class="fl">Prénom (Marié)</label>
+          <input type="text" class="fi" id="f-n2" placeholder="Emmanuel" oninput="updatePreview()">
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Date de l'événement</label>
+        <input type="text" class="fi" id="f-date" placeholder="Samedi, 15 Juin 2026" oninput="updatePreview()">
+      </div>
+      <div class="fg">
+        <label class="fl">Lieu &amp; Heure</label>
+        <input type="text" class="fi" id="f-venue" placeholder="Château de la Lumière · 19h30" oninput="updatePreview()">
+      </div>
+      <div class="fg">
+        <label class="fl">Message personnalisé</label>
+        <textarea class="fta" id="f-msg" placeholder="Nous serions honorés de votre présence..." oninput="updatePreview()"></textarea>
+      </div>
+      <div class="fg">
+        <label class="fl"><i class="bi bi-image"></i> Photo "Save the Date"</label>
+        <div style="font-size:0.72rem;color:var(--muted);margin-bottom:7px;">Facultatif — apparaîtra dans l'aperçu</div>
+        <input type="file" class="fi" id="f-photo" accept="image/*" onchange="handlePhoto(this)">
+        <div id="photo-prev-box" style="display:none;margin-top:8px;position:relative">
+          <img id="photo-thumb" style="width:100%;height:100px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
+          <button onclick="removePhoto()" style="position:absolute;top:5px;right:5px;background:rgba(0,0,0,0.65);color:#fff;border:none;width:22px;height:22px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;">×</button>
+        </div>
+      </div>
+
+      <div class="wiz-nav">
+        <button class="nav-next" onclick="wizStep(2)">Style <i class="bi bi-arrow-right"></i></button>
+      </div>
+    </div>
+
+    <!-- STEP W2 : Style -->
+    <div class="wiz-step" id="ws-2">
+      <div class="wiz-title">💎 Personnalisez le style</div>
+      <div class="wiz-sub">Affinez chaque détail pour une invitation unique à votre image.</div>
+
+      <div class="fg">
+        <label class="fl">Couleur d'accentuation</label>
+        <div class="color-row">
+          <div class="cswatch sel" style="background:#dc3545" data-c="#dc3545" onclick="pickColor(this)"></div>
+          <div class="cswatch" style="background:#c9a84c" data-c="#c9a84c" onclick="pickColor(this)"></div>
+          <div class="cswatch" style="background:#7ec87e" data-c="#7ec87e" onclick="pickColor(this)"></div>
+          <div class="cswatch" style="background:#7ab8e8" data-c="#7ab8e8" onclick="pickColor(this)"></div>
+          <div class="cswatch" style="background:#e8a8d8" data-c="#e8a8d8" onclick="pickColor(this)"></div>
+          <div class="cswatch" style="background:#c0c0ff" data-c="#c0c0ff" onclick="pickColor(this)"></div>
+          <div class="cswatch" style="background:#fff" data-c="#fff" onclick="pickColor(this)"></div>
+        </div>
+      </div>
+
+      <div class="fg">
+        <label class="fl">Police de caractère</label>
+        <div class="font-grid">
+          <div class="font-opt sel" style="font-family:'Playfair Display',serif" data-font="Playfair Display" onclick="pickFont(this)">Playfair<br><small style="opacity:0.5;font-size:0.68em">Élégant</small></div>
+          <div class="font-opt" style="font-family:Inter,sans-serif" data-font="Inter" onclick="pickFont(this)">Inter<br><small style="opacity:0.5;font-size:0.68em">Moderne</small></div>
+          <div class="font-opt" style="font-family:Georgia,serif" data-font="Georgia" onclick="pickFont(this)">Georgia<br><small style="opacity:0.5;font-size:0.68em">Prestige</small></div>
+          <div class="font-opt" style="font-family:'Cormorant Garamond',serif" data-font="Cormorant Garamond" onclick="pickFont(this)">Cormorant<br><small style="opacity:0.5;font-size:0.68em">Luxueux</small></div>
+        </div>
+      </div>
+
+      <div class="fg">
+        <label class="fl" style="margin-bottom:10px">Options interactives</label>
+        <div class="trow"><div><div class="trow-lbl">🎬 Animation enveloppe</div><div class="trow-sub">L'invité "ouvre" l'invitation</div></div><button class="tog on" id="tog-env" onclick="this.classList.toggle('on')"></button></div>
+        <div class="trow"><div><div class="trow-lbl">✅ Bouton RSVP</div><div class="trow-sub">L'invité confirme en 1 clic</div></div><button class="tog on" id="tog-rsvp" onclick="this.classList.toggle('on')"></button></div>
+        <div class="trow"><div><div class="trow-lbl">📍 Plan d'accès</div><div class="trow-sub">Lien Google Maps</div></div><button class="tog" id="tog-map" onclick="this.classList.toggle('on')"></button></div>
+        <div class="trow"><div><div class="trow-lbl">🎵 Musique de fond</div><div class="trow-sub">URL MP3 en ligne</div></div><button class="tog" id="tog-music" onclick="toggleMusic(this)"></button></div>
+        <div id="music-field" class="fg" style="display:none;margin-top:6px">
+          <input type="url" class="fi" id="f-music" placeholder="https://...mp3">
+        </div>
+      </div>
+
+      <div class="wiz-nav">
+        <button class="nav-prev" onclick="wizStep(1)"><i class="bi bi-arrow-left"></i> Retour</button>
+        <button class="nav-next" onclick="wizStep(3)">Finir <i class="bi bi-check2"></i></button>
+      </div>
+    </div>
+
+    <!-- STEP W3 : Send -->
+    <div class="wiz-step" id="ws-3">
+      <div class="wiz-title">🚀 Prêt à envoyer !</div>
+      <div class="wiz-sub">Chaque invité reçoit un lien unique et personnalisé. Testez le vôtre ci-dessous.</div>
+
+      <!-- status -->
+      <div style="background:rgba(34,197,94,0.09);border:1px solid rgba(34,197,94,0.22);border-radius:10px;padding:11px 13px;margin-bottom:16px;display:flex;gap:10px;align-items:center;">
+        <span style="font-size:1.3rem">✅</span>
+        <div>
+          <strong style="display:block;font-size:0.85rem;margin-bottom:1px">Design sauvegardé — {{ invites_count }} invité(s)</strong>
+          <span style="font-size:0.73rem;color:var(--muted)">Chaque invité verra son prénom injecté automatiquement.</span>
+        </div>
+      </div>
+
+      <!-- Invite list -->
+      {% if invites %}
+      <div style="margin-bottom:14px">
+        <label class="fl" style="margin-bottom:7px">🔗 Liens personnalisés</label>
+        <div style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;">
+          {% for invite in invites %}
+          <div class="invite-row">
+            <div class="invite-av">{{ invite.prenom|slice:":1"|upper }}{{ invite.nom|slice:":1"|upper }}</div>
+            <div style="flex:1;min-width:0">
+              <div class="invite-name">{{ invite.prenom }} {{ invite.nom }}</div>
+              <div class="invite-code">/i/{{ invite.code }}/</div>
+            </div>
+            <div class="invite-actions">
+              <a href="{% url 'guests:guest_invitation' invite.code %}" target="_blank" class="iabtn iabtn-view"><i class="bi bi-eye"></i> Voir</a>
+              <button class="iabtn iabtn-copy" onclick="copyLink('{{ request.scheme }}://{{ request.get_host }}{% url "guests:guest_invitation" invite.code %}')"><i class="bi bi-clipboard"></i></button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <div style="background:rgba(255,180,0,0.07);border:1px solid rgba(255,180,0,0.2);border-radius:10px;padding:13px;margin-bottom:14px;display:flex;gap:9px;align-items:flex-start;">
+        <span style="font-size:1.2rem">⚠️</span>
+        <div>
+          <strong style="display:block;font-size:0.82rem;margin-bottom:3px">Aucun invité pour l'instant</strong>
+          <span style="font-size:0.74rem;color:var(--muted)">Ajoutez des invités pour générer leurs liens personnalisés.</span>
+          <a href="{% url 'guests:add_invite' %}?event={{ event.id }}" style="display:inline-block;margin-top:7px;padding:5px 11px;background:rgba(214,51,71,0.25);border:1px solid rgba(214,51,71,0.4);border-radius:6px;color:#fff;text-decoration:none;font-size:0.74rem;font-weight:600;">+ Ajouter des invités</a>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Send methods -->
+      <label class="fl" style="margin-bottom:8px">Envoi en masse</label>
+      <div class="send-list">
+        <a class="send-item" href="{% url 'guests:envoyer_invitations' %}?event={{ event.id }}">
+          <div class="send-icon" style="background:rgba(214,51,71,0.12)">📧</div>
+          <div class="send-text"><strong>Par Email</strong><span>Mail HTML avec bouton "Ouvrir"</span></div>
+          <i class="bi bi-chevron-right" style="margin-left:auto;color:var(--muted)"></i>
+        </a>
+        <div class="send-item" onclick="alert('Envoi WhatsApp disponible dans la page Invitations.')">
+          <div class="send-icon" style="background:rgba(37,211,102,0.12)">💬</div>
+          <div class="send-text"><strong>WhatsApp en masse</strong><span>Un lien par invité, envoi automatique</span></div>
+          <i class="bi bi-chevron-right" style="margin-left:auto;color:var(--muted)"></i>
+        </div>
+      </div>
+
+      <div class="wiz-nav">
+        <button class="nav-prev" onclick="wizStep(2)"><i class="bi bi-arrow-left"></i> Modifier</button>
+      </div>
+    </div>
+
+  </div><!-- /wiz-panel -->
+
+  <!-- Right preview -->
+  <div id="wiz-preview">
+    <div class="plive"><div class="plive-dot"></div> Aperçu en direct</div>
+    <div class="phone">
+      <div class="phone-notch"></div>
+      <div id="phone-screen">
+        <div class="inv inv-romanesque" id="inv-screen">
+          <div class="inv-deco inv-deco-el">✦ ❦ ✦</div>
+          <div class="inv-badge inv-badge-el">MARIAGE</div>
+          <img class="inv-photo" id="inv-photo" src="" alt="">
+          <div class="inv-evname" id="inv-evname">Notre Mariage</div>
+          <div class="inv-names" id="inv-names">Sarah<span class="inv-and">&amp;</span>Emmanuel</div>
+          <hr class="inv-hr inv-hr-el">
+          <div class="inv-date" id="inv-date">Samedi, 15 Juin 2026</div>
+          <div class="inv-venue" id="inv-venue">Château de la Lumière · 19h30</div>
+          <div class="inv-msg" id="inv-msg">"Nous serions honorés de votre présence pour célébrer ce moment unique…"</div>
+          <button class="inv-rsvp" id="inv-rsvp" style="background:linear-gradient(135deg,#dc3545,#8b111c);color:#fff;">✓ Confirmer ma présence</button>
+          <div class="inv-qrhint">QR Code VIP · Invité Personnalisé</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /wizard-page -->
+
+
+<!-- TOAST -->
+<div id="toast" style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);backdrop-filter:blur(12px);color:#fff;padding:10px 22px;border-radius:50px;font-size:0.82rem;font-weight:600;z-index:999;opacity:0;transition:all 0.4s;pointer-events:none;display:flex;align-items:center;gap:8px;">
+  <i class="bi bi-check-circle" style="color:#22c55e"></i> <span id="toast-msg">Lien copié !</span>
+</div>
+
+<!-- ============================================================
+     SCRIPT
+============================================================ -->
+<script>
+/* -------- CANVAS PARTICLE BG -------- */
+const cvs = document.getElementById('cvs');
+const ctx = cvs.getContext('2d');
+let W, H, pts = [];
+function resizeCvs() {
+  W = cvs.width  = window.innerWidth;
+  H = cvs.height = window.innerHeight;
+}
+function initPts() {
+  pts = Array.from({length:60},()=>({
+    x: Math.random()*W, y: Math.random()*H,
+    vx:(Math.random()-.5)*.3, vy:(Math.random()-.5)*.3,
+    r: Math.random()*1.5+.5,
+    c:`rgba(${[214,180,120][Math.floor(Math.random()*3)]},${[51,140,120][Math.floor(Math.random()*3)]},${[71,76,180][Math.floor(Math.random()*3)]},.5)`
+  }));
+}
+function drawPts() {
+  ctx.clearRect(0,0,W,H);
+  pts.forEach(p=>{
+    p.x+=p.vx; p.y+=p.vy;
+    if(p.x<0||p.x>W)p.vx*=-1;
+    if(p.y<0||p.y>H)p.vy*=-1;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle=p.c; ctx.fill();
+  });
+  requestAnimationFrame(drawPts);
+}
+resizeCvs(); initPts(); drawPts();
+window.addEventListener('resize',()=>{resizeCvs();initPts();});
+
+/* -------- STATE -------- */
+const S = {
+  theme:'romanesque', accentColor:'#dc3545',
+  font:'Playfair Display', photoB64:null,
+  wizStep:1
+};
+
+const themeMap = {
+  romanesque:'inv-romanesque', gold:'inv-gold', jardin:'inv-jardin',
+  ocean:'inv-ocean', nuage:'inv-nuage', nuit:'inv-nuit',
+  sunset:'inv-sunset', vintage:'inv-vintage', renaissance:'inv-renaissance',
+  watercolor:'inv-watercolor', forest:'inv-forest', luxe:'inv-luxe'
+};
+
+const themeInfo = {
+  romanesque:{name:'🌹 Rose Éternelle',desc:'Un thème romantique avec des pétales animés. Parfait pour un mariage élégant.',tags:['🎬 Animé','🌸 Floral']},
+  gold:       {name:'✨ Or & Lumière',  desc:'Particules dorées flottantes sur fond sombre. Luxueux et intemporel.',tags:['🎬 Animé','💛 Or']},
+  jardin:     {name:'🌿 Jardin Floral', desc:'Fleurs animées sur fond vert profond. Naturel et poétique.',tags:['🎬 Animé','🌸 Floral']},
+  nuit:       {name:'🌙 Nuit Étoilée',  desc:'Étoiles scintillantes sur ciel nocturne. Magique et envoûtant.',tags:['🎬 Animé','🌙 Dark']},
+  ocean:      {name:'🌊 Océan Mystique',desc:'Vagues animées sur fond nuit. Mystérieux et profond.',tags:['🎬 Animé','🌙 Dark']},
+  nuage:      {name:'☁️ Blanc Minimaliste',desc:'Lignes épurées sur blanc pur. Élégance dans la simplicité.',tags:['☁️ Minimal']},
+  sunset:     {name:'🌅 Coucher de Soleil',desc:'Dégradé du violet au doré. Chaleureux et spectaculaire.',tags:['🎬 Animé','🌙 Dark']},
+  vintage:    {name:'🕊️ Vintage Rose',  desc:'Texture douce et teintes vieillis. Nostalgique et authentique.',tags:['🕊️ Vintage','🌸 Floral']},
+  renaissance:{name:'👑 Renaissance',   desc:'Cadre doré sur fond sombre. Majestueux et royal.',tags:['💛 Or','☁️ Minimal']},
+  watercolor: {name:'🎨 Aquarelle Rose',desc:'Blobs aquarelle animés sur fond rosé. Doux et artistique.',tags:['🎬 Animé','🌸 Floral']},
+  forest:     {name:'🌲 Forêt Enchantée',desc:'Feuilles tombantes sur fond forêt. Mystique et naturel.',tags:['🎬 Animé','🌸 Floral']},
+  luxe:       {name:'💎 Luxe Noir Diamant',desc:'Diamants flottants sur noir absolu. Ultra-premium et sophistiqué.',tags:['🎬 Animé','🌙 Dark']},
+};
+
+/* -------- CARD ANIMATIONS -------- */
+function spawnCardAnims() {
+  // Rose
+  const rose = document.getElementById('ci-rose');
+  for(let i=0;i<10;i++){
+    const e=document.createElement('div'); e.className='petal';
+    e.style.cssText=`left:${10+Math.random()*80}%;top:${Math.random()*30}%;width:${5+Math.random()*5}px;height:${7+Math.random()*8}px;animation-duration:${2.5+Math.random()*3}s;animation-delay:${Math.random()*4}s;`;
+    rose.appendChild(e);
+  }
+  // Gold
+  const gold = document.getElementById('ci-gold');
+  for(let i=0;i<12;i++){
+    const e=document.createElement('div'); e.className='g-particle';
+    const s=3+Math.random()*6;
+    e.style.cssText=`left:${Math.random()*95}%;top:${Math.random()*90}%;width:${s}px;height:${s}px;animation-duration:${1.5+Math.random()*2.5}s;animation-delay:${Math.random()*2.5}s;`;
+    gold.appendChild(e);
+  }
+  // Garden
+  const gar = document.getElementById('ci-garden');
+  ['🌸','🌺','🌹','🌼','💐'].forEach((f,i)=>{
+    const e=document.createElement('div'); e.className='flower'; e.textContent=f;
+    e.style.cssText=`left:${i*18+4}%;bottom:${5+Math.random()*20}%;font-size:${0.75+Math.random()*0.5}rem;animation-duration:${2+Math.random()*2}s;animation-delay:${i*0.3}s;opacity:0.6;`;
+    gar.appendChild(e);
+  });
+  // Stars
+  const stars = document.getElementById('ci-stars');
+  for(let i=0;i<22;i++){
+    const e=document.createElement('div'); e.className='star';
+    const s=1+Math.random()*2.5;
+    e.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;width:${s}px;height:${s}px;animation-duration:${0.7+Math.random()*2}s;animation-delay:${Math.random()*2.5}s;`;
+    stars.appendChild(e);
+  }
+  // Ocean
+  const oc = document.getElementById('ci-ocean');
+  for(let i=0;i<4;i++){
+    const e=document.createElement('div'); e.className='waveline';
+    e.style.cssText=`bottom:${8+i*22}%;animation-duration:${3+i*.8}s;animation-delay:${i*.5}s;opacity:${.25+i*.15};`;
+    oc.appendChild(e);
+  }
+  // Watercolor
+  const wc = document.getElementById('ci-water');
+  [['rgba(255,150,180,.4)',0],['rgba(255,200,140,.35)',25],['rgba(180,100,200,.3)',55]].forEach(([c,l],i)=>{
+    const e=document.createElement('div'); e.className='wblob';
+    const s=40+Math.random()*35;
+    e.style.cssText=`left:${l}%;top:${10+Math.random()*55}%;width:${s}px;height:${s*.85}px;background:${c};animation-duration:${2+Math.random()*2}s;animation-delay:${i*.6}s;`;
+    wc.appendChild(e);
+  });
+  // Forest
+  const fo = document.getElementById('ci-forest');
+  ['🍃','🍀','🌿','🍃','🌿','🍀'].forEach((l,i)=>{
+    const e=document.createElement('div'); e.className='leaf'; e.textContent=l;
+    e.style.cssText=`left:${8+Math.random()*82}%;top:${Math.random()*25}%;font-size:${.7+Math.random()*0.4}rem;animation-duration:${3.5+Math.random()*4}s;animation-delay:${Math.random()*4.5}s;opacity:.7;`;
+    fo.appendChild(e);
+  });
+  // Luxe
+  const lx = document.getElementById('ci-luxe');
+  for(let i=0;i<10;i++){
+    const e=document.createElement('div'); e.className='diamond';
+    const s=3+Math.random()*5;
+    e.style.cssText=`left:${5+Math.random()*90}%;top:${5+Math.random()*90}%;width:${s}px;height:${s}px;animation-duration:${1+Math.random()*2.5}s;animation-delay:${Math.random()*3}s;`;
+    lx.appendChild(e);
+  }
+}
+spawnCardAnims();
+
+/* -------- FILTER GALLERY -------- */
+function filterGallery(el,cat){
+  document.querySelectorAll('.cat-pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.tcard').forEach(c=>{
+    const cats = c.dataset.cats||'';
+    if(cat==='all'||cats.includes(cat)){
+      c.classList.remove('hidden');
+      c.style.animation='cardIn .3s ease';
+    } else {
+      c.classList.add('hidden');
+    }
+  });
+}
+const cardStyle=document.createElement('style');
+cardStyle.textContent='@keyframes cardIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}';
+document.head.appendChild(cardStyle);
+
+/* -------- SELECT CARD -------- */
+let selectedCard = null;
+function selectCard(card){
+  if(selectedCard) selectedCard.classList.remove('selected');
+  card.classList.add('selected');
+  selectedCard = card;
+  S.theme = card.dataset.theme;
+
+  // Update CTA bar
+  document.getElementById('gcta-name').textContent = card.dataset.name||'—';
+  document.getElementById('gallery-cta').classList.add('show');
+
+  // Spotlight effect: dim others
+  document.querySelectorAll('.tcard').forEach(c=>{
+    c.style.opacity = (c===card)?'1':'0.45';
+    c.style.filter  = (c===card)?'none':'grayscale(30%)';
+  });
+  card.style.transform='translateY(-10px) scale(1.04)';
+}
+
+function deselectAll(){
+  document.querySelectorAll('.tcard').forEach(c=>{
+    c.style.opacity='1'; c.style.filter='none'; c.style.transform='';
+  });
+  document.getElementById('gallery-cta').classList.remove('show');
+  selectedCard=null;
+}
+
+function selectCardAndGo(card){
+  selectCard(card);
+  setTimeout(goToWizard,200);
+}
+
+/* -------- OPEN PREVIEW MODAL -------- */
+let previewTheme = null;
+function openPreview(theme){
+  previewTheme = theme;
+  const info = themeInfo[theme]||{name:theme,desc:'',tags:[]};
+  document.getElementById('modal-theme-name').textContent = info.name;
+  document.getElementById('modal-theme-desc').textContent = info.desc;
+  const tagsEl = document.getElementById('modal-tags');
+  tagsEl.innerHTML = info.tags.map(t=>`<span class="modal-tag">${t}</span>`).join('');
+
+  const sc = document.getElementById('modal-inv');
+  sc.className = 'inv '+(themeMap[theme]||'inv-romanesque');
+
+  const m = document.getElementById('preview-modal');
+  m.classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closePreview(){
+  document.getElementById('preview-modal').classList.remove('open');
+  document.body.style.overflow='';
+}
+function selectModalTheme(){
+  if(!previewTheme) return;
+  closePreview();
+  // Find and select the card
+  const card = document.querySelector(`.tcard[data-theme="${previewTheme}"]`);
+  if(card){ selectCard(card); setTimeout(goToWizard,300); }
+}
+
+/* -------- GO TO WIZARD -------- */
+function goToWizard(){
+  if(!S.theme) return;
+  const info = themeInfo[S.theme]||{name:S.theme};
+
+  document.getElementById('gallery-page').classList.remove('active');
+  const wp = document.getElementById('wizard-page');
+  wp.classList.add('active');
+  wp.style.display='flex';
+
+  document.getElementById('stp-name').textContent = info.name;
+  // Mini preview bg in pill
+  const mini = document.getElementById('stp-preview-mini');
+  mini.className = 'stp-preview '+(themeMap[S.theme]||'').replace('inv-','tp-');
+
+  // Update phone preview theme
+  applyThemeToPhone();
+  updatePreview();
+  setProgress(50);
+}
+
+function backToGallery(){
+  document.getElementById('wizard-page').classList.remove('active');
+  document.getElementById('wizard-page').style.display='none';
+  document.getElementById('gallery-page').classList.add('active');
+  deselectAll();
+  setProgress(25);
+}
+
+/* -------- WIZARD STEPS -------- */
+function wizStep(n){
+  S.wizStep=n;
+  document.querySelectorAll('.wiz-step').forEach(s=>s.classList.remove('active'));
+  document.getElementById('ws-'+n).classList.add('active');
+
+  for(let i=1;i<=3;i++){
+    const d=document.getElementById('wd-'+i);
+    d.classList.remove('active','done');
+    if(i===n) d.classList.add('active');
+    else if(i<n) d.classList.add('done');
+  }
+  for(let i=1;i<=2;i++){
+    const c=document.getElementById('wc-'+i);
+    c.classList.toggle('done',i<n);
+  }
+
+  setProgress(40 + n*20);
+  if(n===3) saveGlobal(true);
+}
+
+function setProgress(pct){
+  document.getElementById('progress-fill').style.width=pct+'%';
+}
+
+/* -------- PHONE PREVIEW -------- */
+function applyThemeToPhone(){
+  const sc=document.getElementById('inv-screen');
+  sc.className='inv '+(themeMap[S.theme]||'inv-romanesque');
+  sc.style.opacity='0';
+  setTimeout(()=>{sc.style.transition='opacity .5s';sc.style.opacity='1';},40);
+}
+
+function updatePreview(){
+  const evname = document.getElementById('f-evname')?.value||'Notre Mariage';
+  const n1     = document.getElementById('f-n1')?.value||'Sarah';
+  const n2     = document.getElementById('f-n2')?.value||'Emmanuel';
+  const date   = document.getElementById('f-date')?.value||'Samedi, 15 Juin 2026';
+  const venue  = document.getElementById('f-venue')?.value||'Château de la Lumière · 19h30';
+  const msg    = document.getElementById('f-msg')?.value||'Nous serions honorés de votre présence…';
+
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.innerHTML=v;};
+  set('inv-evname', evname);
+  set('inv-date',   date);
+  set('inv-venue',  venue);
+  set('inv-msg',    `"${msg}"`);
+  const nEl=document.getElementById('inv-names');
+  if(nEl) nEl.innerHTML=`${n1}<span class="inv-and">&amp;</span>${n2}`;
+
+  const badge=document.getElementById('inv-badge-el')||document.querySelector('#inv-screen .inv-badge');
+  if(badge) badge.textContent=evname.toUpperCase();
+
+  // Photo
+  const photo=document.getElementById('inv-photo');
+  if(photo){
+    if(S.photoB64){photo.src=S.photoB64;photo.style.display='block';}
+    else photo.style.display='none';
+  }
+
+  // RSVP button color
+  const rsvp=document.getElementById('inv-rsvp');
+  if(rsvp) rsvp.style.background=`linear-gradient(135deg,${S.accentColor},${shadeColor(S.accentColor,-40)})`;
+
+  // Font
+  document.getElementById('inv-names').style.fontFamily=`'${S.font}',serif`;
+}
+
+function shadeColor(c,p){
+  const num=parseInt(c.replace('#',''),16);
+  const r=Math.min(255,Math.max(0,(num>>16)+p));
+  const g=Math.min(255,Math.max(0,((num>>8)&0xff)+p));
+  const b=Math.min(255,Math.max(0,(num&0xff)+p));
+  return `#${((r<<16)|(g<<8)|b).toString(16).padStart(6,'0')}`;
+}
+
+/* -------- PHOTO -------- */
+function handlePhoto(inp){
+  const f=inp.files[0];
+  if(!f) return;
+  const rd=new FileReader();
+  rd.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      const cvs2=document.createElement('canvas');
+      const MAX=600; let w=img.width,h=img.height;
+      if(w>h){if(w>MAX){h=h*MAX/w;w=MAX;}}else{if(h>MAX){w=w*MAX/h;h=MAX;}}
+      cvs2.width=w;cvs2.height=h;
+      cvs2.getContext('2d').drawImage(img,0,0,w,h);
+      S.photoB64=cvs2.toDataURL('image/jpeg',0.65);
+      document.getElementById('photo-thumb').src=S.photoB64;
+      document.getElementById('photo-prev-box').style.display='block';
+      updatePreview();
+    };
+    img.src=e.target.result;
+  };
+  rd.readAsDataURL(f);
+}
+function removePhoto(){
+  S.photoB64=null;
+  document.getElementById('f-photo').value='';
+  document.getElementById('photo-prev-box').style.display='none';
+  updatePreview();
+}
+
+/* -------- STYLE PICKERS -------- */
+function pickColor(el){
+  document.querySelectorAll('.cswatch').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  S.accentColor=el.dataset.c;
+  updatePreview();
+}
+function pickFont(el){
+  document.querySelectorAll('.font-opt').forEach(o=>o.classList.remove('sel'));
+  el.classList.add('sel');
+  S.font=el.dataset.font;
+  updatePreview();
+}
+function toggleMusic(tog){
+  tog.classList.toggle('on');
+  document.getElementById('music-field').style.display=tog.classList.contains('on')?'block':'none';
+}
+
+/* -------- COPY LINK -------- */
+function copyLink(url){
+  navigator.clipboard.writeText(url).then(()=>toast('Lien copié !'));
+}
+function toast(msg,color='rgba(34,197,94,0.15)',bd='rgba(34,197,94,0.3)'){
+  const t=document.getElementById('toast');
+  document.getElementById('toast-msg').textContent=msg;
+  t.style.background=color; t.style.borderColor=bd;
+  t.style.opacity='1'; t.style.transform='translateX(-50%) translateY(0)';
+  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(20px)';},2200);
+}
+
+/* -------- SAVE -------- */
+const SAVE_URL = "{% url 'guests:save_template' event.id %}";
+const CSRF     = "{{ csrf_token }}";
+const EVENT_ID = "{{ event.id }}";
+
+function saveGlobal(silent=false){
+  const payload={
+    event_id:EVENT_ID,
+    template:S.theme,
+    event_name:document.getElementById('f-evname')?.value||'',
+    name1:document.getElementById('f-n1')?.value||'',
+    name2:document.getElementById('f-n2')?.value||'',
+    event_date:document.getElementById('f-date')?.value||'',
+    venue:document.getElementById('f-venue')?.value||'',
+    message:document.getElementById('f-msg')?.value||'',
+    accent_color:S.accentColor,
+    font_family:S.font,
+    show_rsvp:document.getElementById('tog-rsvp')?.classList.contains('on')||false,
+    show_envelope:document.getElementById('tog-env')?.classList.contains('on')||false,
+    show_map:document.getElementById('tog-map')?.classList.contains('on')||false,
+    music_url:document.getElementById('f-music')?.value||'',
+    photo_b64:S.photoB64||''
+  };
+  fetch(SAVE_URL,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+    body:JSON.stringify(payload)
+  }).then(r=>r.json()).then(d=>{
+    if(!silent) toast('✅ Sauvegardé !');
+  }).catch(()=>{
+    if(!silent) toast('Erreur lors de la sauvegarde','rgba(214,51,71,0.15)','rgba(214,51,71,0.3)');
+  });
+}
+
+/* -------- CLOSE MODAL ON BACKDROP -------- */
+document.getElementById('preview-modal').addEventListener('click',function(e){
+  if(e.target===this) closePreview();
+});
+
+/* -------- INIT -------- */
+setProgress(25);
+</script>
+</body>
+</html>

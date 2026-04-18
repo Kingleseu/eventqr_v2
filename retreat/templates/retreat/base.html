@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block app_nav %}
+<nav class="border-bottom bg-white">
+  <div class="container d-flex gap-3 py-2">
+    <a class="text-decoration-none {% if request.resolver_match.url_name == 'home' %}fw-semibold{% endif %}" href="{% url 'retreat:home' %}">Accueil Retraite</a>
+    {# Ajoute ici tes liens (participants, ateliers, chambres, billets, etc.) #}
+  </div>
+</nav>
+{% endblock %}
