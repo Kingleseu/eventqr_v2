@@ -20,6 +20,7 @@ from events.models import Event
 from .models import Invite, Table
 from .forms import InviteForm, TableForm, AddInviteToTableForm
 import json
+import bleach
 from django.views.decorators.csrf import csrf_exempt
 
 # ---- Imports optionnels (PDF/Excel) ----
@@ -1103,7 +1104,7 @@ def invitation_studio(request, event_id: int):
     # Passer la liste des invités pour l'étape 4 (vrais liens)
     invites = Invite.objects.filter(event=ev).exclude(code__isnull=True).exclude(code="").order_by("nom", "prenom")
     
-    return render(request, "guests/builder/studio.html", {
+    return render(request, "guests/builder/studio_v2.html", {
         "event": ev,
         "template": template,
         "invites": invites,
@@ -1124,10 +1125,29 @@ def save_template(request, event_id: int):
         template, _ = InvitationTemplate.objects.get_or_create(event=ev)
         
         data = json.loads(request.body)
-        template.html_content = data.get("html", "")
-        template.css_content = data.get("css", "")
-        template.components_data = data.get("components", "[]") # Optional JSON components
-        template.styles_data = data.get("styles", "[]") # Optional JSON styles
+
+        # Sanitize HTML to prevent XSS
+        raw_html = data.get("html", template.html_content)
+        allowed_tags = [
+            'div', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'hr', 'img', 'button', 'a'
+        ]
+        allowed_attrs = {
+            '*': ['style', 'class', 'id'],
+            'a': ['href', 'title', 'target'],
+            'img': ['src', 'alt', 'width', 'height'],
+        }
+        # Allow all styles for the builder
+        clean_html = bleach.clean(raw_html, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+
+        template.html_content = clean_html
+        template.css_content = data.get("css", template.css_content)
+
+        # Le studio_v2 envoie les champs dans 'config'
+        config_raw = data.get("config")
+        if config_raw:
+            # On peut stocker la config brute dans components_data par exemple
+            template.components_data = config_raw
+
         template.save()
         
         return JsonResponse({"status": "success", "message": "Sauvegarde réussie !"})
