@@ -684,11 +684,22 @@
       display:flex; align-items:center; gap:6px; text-transform:uppercase;
     }
     .plive-dot { width:6px;height:6px;background:#22c55e;border-radius:50%; animation:blink 1.5s ease-in-out infinite; }
+
+    /* Canva-style Tooltip */
+    .edit-tooltip {
+      position: absolute; background: var(--red); color: #fff;
+      padding: 4px 10px; border-radius: 6px; font-size: 0.65rem;
+      font-weight: 700; pointer-events: none; z-index: 100;
+      transform: translateY(-100%) translateY(-10px);
+      box-shadow: 0 4px 12px var(--red-glow);
+      display: none;
+    }
+
     .phone {
       width:300px; height:600px;
       background:#111; border-radius:42px;
-      border:5px solid #222;
-      box-shadow:0 30px 80px rgba(0,0,0,0.8),0 0 0 1px rgba(255,255,255,0.04),inset 0 0 0 2px #1a1a1a;
+      border:12px solid #1a1a1a;
+      box-shadow:0 30px 80px rgba(0,0,0,0.8),0 0 0 1px rgba(255,255,255,0.04),inset 0 0 0 2px #000;
       overflow:hidden; position:relative; transition:all 0.5s;
     }
     .phone-notch {
@@ -733,6 +744,17 @@
     .inv-rsvp    { display:block; width:100%; padding:12px; border-radius:50px; text-align:center; font-size:0.8rem; font-weight:600; letter-spacing:1px; border:none; cursor:pointer; font-family:'Playfair Display',serif; transition:all 0.3s; margin-bottom:8px; }
     .inv-qrhint  { font-size:0.6rem; color:rgba(255,255,255,0.25); text-align:center; letter-spacing:1px; }
     .inv-photo   { display:none; width:120px; height:120px; border-radius:50%; object-fit:cover; border:3px solid rgba(255,255,255,0.2); margin-bottom:13px; box-shadow:0 10px 30px rgba(0,0,0,0.4); }
+
+    /* Canva interaction */
+    [contenteditable]:hover {
+        outline: 2px dashed var(--red);
+        outline-offset: 4px;
+        cursor: text;
+    }
+    [contenteditable]:focus {
+        outline: 2px solid var(--red);
+        outline-offset: 4px;
+    }
 
     /* Light themes fix */
     .inv-nuage .inv-evname,.inv-nuage .inv-names,.inv-nuage .inv-date,.inv-nuage .inv-venue,.inv-nuage .inv-msg  { color:#1a1a2e !important; }
@@ -1319,18 +1341,23 @@
   <div id="wiz-preview">
     <div class="plive"><div class="plive-dot"></div> Aperçu en direct</div>
     <div class="phone">
+      <div id="edit-tooltip" class="edit-tooltip">Édition directe</div>
       <div class="phone-notch"></div>
       <div id="phone-screen">
         <div class="inv inv-romanesque" id="inv-screen">
           <div class="inv-deco inv-deco-el">✦ ❦ ✦</div>
-          <div class="inv-badge inv-badge-el">MARIAGE</div>
+          <div class="inv-badge inv-badge-el" contenteditable="true" data-field="f-evname">MARIAGE</div>
           <img class="inv-photo" id="inv-photo" src="" alt="">
-          <div class="inv-evname" id="inv-evname">Notre Mariage</div>
-          <div class="inv-names" id="inv-names">Sarah<span class="inv-and">&amp;</span>Emmanuel</div>
+          <div class="inv-evname" id="inv-evname" contenteditable="true" data-field="f-evname">Notre Mariage</div>
+          <div class="inv-names" id="inv-names">
+            <span contenteditable="true" data-field="f-n1" id="inv-n1">Sarah</span>
+            <span class="inv-and">&amp;</span>
+            <span contenteditable="true" data-field="f-n2" id="inv-n2">Emmanuel</span>
+          </div>
           <hr class="inv-hr inv-hr-el">
-          <div class="inv-date" id="inv-date">Samedi, 15 Juin 2026</div>
-          <div class="inv-venue" id="inv-venue">Château de la Lumière · 19h30</div>
-          <div class="inv-msg" id="inv-msg">"Nous serions honorés de votre présence pour célébrer ce moment unique…"</div>
+          <div class="inv-date" id="inv-date" contenteditable="true" data-field="f-date">Samedi, 15 Juin 2026</div>
+          <div class="inv-venue" id="inv-venue" contenteditable="true" data-field="f-venue">Château de la Lumière · 19h30</div>
+          <div class="inv-msg" id="inv-msg" contenteditable="true" data-field="f-msg">"Nous serions honorés de votre présence pour célébrer ce moment unique…"</div>
           <button class="inv-rsvp" id="inv-rsvp" style="background:linear-gradient(135deg,#dc3545,#8b111c);color:#fff;">✓ Confirmer ma présence</button>
           <div class="inv-qrhint">QR Code VIP · Invité Personnalisé</div>
         </div>
@@ -1617,6 +1644,7 @@ function applyThemeToPhone(){
 }
 
 function updatePreview(){
+  if (S.isEditingInline) return; // Don't loop if we are editing in the phone
   const evname = document.getElementById('f-evname')?.value||'Notre Mariage';
   const n1     = document.getElementById('f-n1')?.value||'Sarah';
   const n2     = document.getElementById('f-n2')?.value||'Emmanuel';
@@ -1624,13 +1652,17 @@ function updatePreview(){
   const venue  = document.getElementById('f-venue')?.value||'Château de la Lumière · 19h30';
   const msg    = document.getElementById('f-msg')?.value||'Nous serions honorés de votre présence…';
 
-  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.innerHTML=v;};
+  const set=(id,v)=>{
+    const el=document.getElementById(id);
+    if(el && el.innerHTML !== v) el.innerHTML=v;
+  };
+
   set('inv-evname', evname);
   set('inv-date',   date);
   set('inv-venue',  venue);
-  set('inv-msg',    `"${msg}"`);
-  const nEl=document.getElementById('inv-names');
-  if(nEl) nEl.innerHTML=`${n1}<span class="inv-and">&amp;</span>${n2}`;
+  set('inv-msg',    msg.startsWith('"') ? msg : `"${msg}"`);
+  set('inv-n1', n1);
+  set('inv-n2', n2);
 
   const badge=document.getElementById('inv-badge-el')||document.querySelector('#inv-screen .inv-badge');
   if(badge) badge.textContent=evname.toUpperCase();
@@ -1723,22 +1755,30 @@ const CSRF     = "{{ csrf_token }}";
 const EVENT_ID = "{{ event.id }}";
 
 function saveGlobal(silent=false){
+  // Generate the final HTML for the invitation
+  const guestHTML = buildFinalHTML();
+  const cssContent = getBuiltCSS();
+
   const payload={
     event_id:EVENT_ID,
-    template:S.theme,
-    event_name:document.getElementById('f-evname')?.value||'',
-    name1:document.getElementById('f-n1')?.value||'',
-    name2:document.getElementById('f-n2')?.value||'',
-    event_date:document.getElementById('f-date')?.value||'',
-    venue:document.getElementById('f-venue')?.value||'',
-    message:document.getElementById('f-msg')?.value||'',
-    accent_color:S.accentColor,
-    font_family:S.font,
-    show_rsvp:document.getElementById('tog-rsvp')?.classList.contains('on')||false,
-    show_envelope:document.getElementById('tog-env')?.classList.contains('on')||false,
-    show_map:document.getElementById('tog-map')?.classList.contains('on')||false,
-    music_url:document.getElementById('f-music')?.value||'',
-    photo_b64:S.photoB64||''
+    html: guestHTML,
+    css: cssContent,
+    config: JSON.stringify({
+        template:S.theme,
+        event_name:document.getElementById('f-evname')?.value||'',
+        name1:document.getElementById('f-n1')?.value||'',
+        name2:document.getElementById('f-n2')?.value||'',
+        event_date:document.getElementById('f-date')?.value||'',
+        venue:document.getElementById('f-venue')?.value||'',
+        message:document.getElementById('f-msg')?.value||'',
+        accent_color:S.accentColor,
+        font_family:S.font,
+        show_rsvp:document.getElementById('tog-rsvp')?.classList.contains('on')||false,
+        show_envelope:document.getElementById('tog-env')?.classList.contains('on')||false,
+        show_map:document.getElementById('tog-map')?.classList.contains('on')||false,
+        music_url:document.getElementById('f-music')?.value||'',
+        photo_b64:S.photoB64||''
+    })
   };
   fetch(SAVE_URL,{
     method:'POST',
@@ -1755,6 +1795,76 @@ function saveGlobal(silent=false){
 document.getElementById('preview-modal').addEventListener('click',function(e){
   if(e.target===this) closePreview();
 });
+
+/* -------- CANVA INLINE EDITING -------- */
+document.querySelectorAll('[contenteditable]').forEach(el => {
+    el.addEventListener('focus', () => {
+        S.isEditingInline = true;
+        const tooltip = document.getElementById('edit-tooltip');
+        tooltip.style.display = 'block';
+        const rect = el.getBoundingClientRect();
+        const phoneRect = document.querySelector('.phone').getBoundingClientRect();
+        tooltip.style.left = (rect.left - phoneRect.left + rect.width/2) + 'px';
+        tooltip.style.top = (rect.top - phoneRect.top) + 'px';
+    });
+    el.addEventListener('blur', () => {
+        S.isEditingInline = false;
+        document.getElementById('edit-tooltip').style.display = 'none';
+        // Sync back to form
+        const fieldId = el.dataset.field;
+        if (fieldId) {
+            const input = document.getElementById(fieldId);
+            if (input) {
+                let val = el.innerText.trim();
+                if (fieldId === 'f-msg') val = val.replace(/^"|"$/g, '');
+                input.value = val;
+            }
+        }
+    });
+    el.addEventListener('input', () => {
+        // Instant sync if needed
+    });
+});
+
+function buildFinalHTML() {
+    const sc = document.getElementById('inv-screen').cloneNode(true);
+    // Remove contenteditable attributes
+    sc.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+
+    // Replace names with placeholders for backend injection if needed,
+    // or keep them as is. The viewer will handle [prenom] [nom].
+    const n1 = sc.querySelector('#inv-n1');
+    const n2 = sc.querySelector('#inv-n2');
+    if (n1 && n2) {
+        n1.innerHTML = "[prenom]";
+        n2.innerHTML = "[nom]";
+    }
+
+    return sc.outerHTML;
+}
+
+function getBuiltCSS() {
+    return `
+    .inv { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px; position:relative; overflow:hidden; }
+    .inv-romanesque { background:linear-gradient(170deg,#120505 0%,#1f0808 50%,#120505 100%); color:#fff; }
+    .inv-gold { background:linear-gradient(170deg,#080800 0%,#130d00 50%,#080800 100%); color:#fff; }
+    .inv-jardin { background:linear-gradient(170deg,#020802 0%,#050f05 50%,#020802 100%); color:#fff; }
+    .inv-ocean { background:linear-gradient(170deg,#010510 0%,#030d20 50%,#010510 100%); color:#fff; }
+    .inv-nuage { background:linear-gradient(170deg,#f8f8fc,#ededf8); color:#1a1a2e; }
+    .inv-nuit { background:radial-gradient(ellipse at top,#0a0a25,#02020a); color:#fff; }
+    .inv-sunset { background:linear-gradient(180deg,#0a0515 0%,#3d1240 30%,#8b2252 60%,#d45a20 85%,#f0a040 100%); color:#fff; }
+    .inv-vintage { background:linear-gradient(160deg,#2a1518 0%,#3d1f22 100%); color:#fff; }
+    .inv-renaissance { background:linear-gradient(160deg,#0a0800 0%,#1a1400 100%); color:#fff; }
+    .inv-watercolor { background:linear-gradient(135deg,#f9f0f3 0%,#fce8ec 40%,#fff5e8 100%); color:#4a2a35; }
+    .inv-forest { background:linear-gradient(160deg,#020a04 0%,#04150a 100%); color:#fff; }
+    .inv-luxe { background:linear-gradient(160deg,#000 0%,#0a0a0a 100%); color:#fff; }
+    .inv-names { font-family:'Playfair Display',serif; font-size:2.2rem; text-align:center; }
+    .inv-and { font-style:italic; font-size:1.2rem; display:block; opacity:0.6; }
+    .inv-badge { border:1px solid; border-radius:20px; padding:4px 15px; font-size:0.7rem; letter-spacing:2px; text-transform:uppercase; margin-bottom:15px; display:inline-block; }
+    .inv-msg { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:15px; font-style:italic; margin:20px 0; width:100%; text-align:center; }
+    .inv-rsvp { display:block; width:100%; padding:15px; border-radius:50px; text-align:center; font-weight:600; text-decoration:none; margin-top:10px; }
+    `;
+}
 
 /* -------- INIT -------- */
 setProgress(25);
